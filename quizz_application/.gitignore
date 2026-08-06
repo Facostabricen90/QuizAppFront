@@ -1,0 +1,147 @@
+# -----------------------------------------------------------------------------
+# QuizApp - Flutter/Dart
+# -----------------------------------------------------------------------------
+
+# Generated Flutter/Dart files and local package metadata.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.fvm/flutter_sdk
+build/
+coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Generated native integration files.
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+macos/Flutter/ephemeral/
+macos/Flutter/Generated.xcconfig
+macos/Flutter/flutter_export_environment.sh
+
+# Android build and machine-local configuration.
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/key.properties
+
+# iOS/macOS dependencies, links and user-specific Xcode data.
+ios/Pods/
+ios/.symlinks/
+ios/Runner.xcworkspace/xcuserdata/
+ios/Runner.xcodeproj/xcuserdata/
+macos/Pods/
+macos/.symlinks/
+macos/Runner.xcworkspace/xcuserdata/
+macos/Runner.xcodeproj/xcuserdata/
+*.xcuserstate
+
+# Windows/Linux generated files.
+windows/flutter/ephemeral/
+linux/flutter/ephemeral/
+
+# -----------------------------------------------------------------------------
+# IDEs and operating-system files
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.history/
+.fleet/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# Logs, caches and temporary files
+# -----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+*.lock
+.cache/
+.gradle/
+.sass-cache/
+!pubspec.lock
+
+# -----------------------------------------------------------------------------
+# Environment files and local configuration
+#
+# Never commit credentials, tokens, private endpoints or machine-specific
+# settings. Keep only the documented, sanitized example file.
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+config/*.json
+!config/env.example.json
+*.local
+*.secret
+*.secrets
+*.secret.*
+*.secrets.*
+*credentials*
+*credential*
+*service-account*
+*firebase-adminsdk*
+*.dart-define.json
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# -----------------------------------------------------------------------------
+# Signing keys, certificates and provisioning material
+# -----------------------------------------------------------------------------
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.crt
+*.csr
+*.der
+*.p7b
+android/app/*.keystore
+android/app/*.jks
+android/app/*.p12
+android/app/*.pfx
+
+# -----------------------------------------------------------------------------
+# Flutter symbolication/obfuscation output
+# -----------------------------------------------------------------------------
+app.*.symbols
+app.*.map.json
+
+# Packages and native artifacts built outside Flutter's build directory.
+*.apk
+*.aab
+*.ipa
+*.dSYM/
+*.app/
+
+# Local databases, infrastructure state and archives.
+*.db
+*.sqlite
+*.sqlite3
+*.tfstate
+*.tfstate.*
