@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+
+enum AppButtonVariant { primary, light }
 
 class AppButton extends StatelessWidget {
   const AppButton({
@@ -10,6 +13,7 @@ class AppButton extends StatelessWidget {
     this.icon,
     this.isLoading = false,
     this.expand = true,
+    this.variant = AppButtonVariant.primary,
   });
 
   final String text;
@@ -17,18 +21,27 @@ class AppButton extends StatelessWidget {
   final IconData? icon;
   final bool isLoading;
   final bool expand;
+  final AppButtonVariant variant;
 
   @override
   Widget build(BuildContext context) {
     final button = ElevatedButton(
       onPressed: isLoading ? null : onPressed,
+      style: variant == AppButtonVariant.light
+          ? ElevatedButton.styleFrom(
+              backgroundColor: AppColors.surface,
+              foregroundColor: AppColors.primary,
+            )
+          : null,
       child: isLoading
-          ? const SizedBox(
+          ? SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: variant == AppButtonVariant.light
+                    ? AppColors.primary
+                    : AppColors.surface,
               ),
             )
           : Row(
@@ -39,7 +52,14 @@ class AppButton extends StatelessWidget {
                   Icon(icon, size: 18),
                   const SizedBox(width: 8),
                 ],
-                Text(text, style: AppTypography.button),
+                Text(
+                  text,
+                  style: AppTypography.button.copyWith(
+                    color: variant == AppButtonVariant.light
+                        ? AppColors.primary
+                        : AppColors.surface,
+                  ),
+                ),
               ],
             ),
     );

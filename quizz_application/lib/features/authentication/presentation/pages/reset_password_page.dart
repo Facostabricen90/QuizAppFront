@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/auth/auth_controller.dart';
@@ -63,9 +65,7 @@ class ResetPasswordPage extends StatelessWidget {
                       )
                     else
                       TextButton(
-                        onPressed: () => Navigator.of(
-                          context,
-                        ).popUntil((route) => route.isFirst),
+                        onPressed: () => context.goNamed(AppRoutes.loginName),
                         child: const Text('Volver al inicio de sesión'),
                       ),
                   ],

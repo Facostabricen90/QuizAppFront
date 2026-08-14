@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../core/auth/auth_controller.dart';
 import '../../../../shared/presentation/widgets/app_button.dart';
 import '../../../../shared/presentation/widgets/app_gap.dart';
 import '../../../../shared/presentation/widgets/app_password_field.dart';
 import '../../../../shared/presentation/widgets/app_text_field.dart';
-import '../pages/register_page.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key, required this.authController});
@@ -52,7 +53,6 @@ class _LoginFormState extends State<LoginForm> {
     }
 
     if (success) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
 
@@ -116,7 +116,7 @@ class _LoginFormState extends State<LoginForm> {
             child: TextButton(
               onPressed: _isLoading
                   ? null
-                  : () => Navigator.of(context).pushNamed('/forgot-password'),
+                  : () => context.pushNamed(AppRoutes.forgotPasswordName),
               child: const Text('¿Olvidaste tu contraseña?'),
             ),
           ),
@@ -147,15 +147,7 @@ class _LoginFormState extends State<LoginForm> {
               TextButton(
                 onPressed: _isLoading
                     ? null
-                    : () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => RegisterPage(
-                              authController: widget.authController,
-                            ),
-                          ),
-                        );
-                      },
+                    : () => context.pushNamed(AppRoutes.registerName),
                 child: const Text('Crear cuenta'),
               ),
             ],

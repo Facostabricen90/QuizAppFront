@@ -48,6 +48,17 @@ abstract final class AppColors {
   static const Color info = Color(0xFFDCE9EE);
 
   //==========================
+  // Student dashboard
+  //==========================
+
+  static const Color challenge = Color(0xFF2F6E50);
+  static const Color scienceSurface = Color(0xFFF7EFC8);
+  static const Color mathematicsSurface = Color(0xFFDCE9EE);
+  static const Color readingSurface = Color(0xFFF5E1DD);
+  static const Color socialSurface = Color(0xFFE1F0E7);
+  static const Color englishSurface = Color(0xFFEAE5F2);
+
+  //==========================
   // Others
   //==========================
 

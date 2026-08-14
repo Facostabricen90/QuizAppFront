@@ -6,10 +6,7 @@ import '../security/token_storage.dart';
 import 'auth_models.dart';
 
 class AuthRepository {
-  const AuthRepository({
-    required this._apiClient,
-    required TokenStorage tokenStorage,
-  }) : _tokenStorage = tokenStorage;
+  const AuthRepository({required this._apiClient, required this._tokenStorage});
 
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;

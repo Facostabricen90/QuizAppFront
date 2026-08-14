@@ -54,6 +54,13 @@ class AuthUser {
   final String email;
   final List<String> roles;
 
+  bool hasRole(String role) {
+    final normalizedRole = role.toLowerCase();
+    return roles.any(
+      (currentRole) => currentRole.toLowerCase() == normalizedRole,
+    );
+  }
+
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
       userId: json['userId']?.toString() ?? '',

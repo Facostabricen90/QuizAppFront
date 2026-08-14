@@ -1,77 +1,40 @@
 import 'package:flutter/material.dart';
 
 import '../core/auth/auth_controller.dart';
-import '../features/authentication/presentation/pages/forgot_password_page.dart';
-import '../features/authentication/presentation/pages/login_page.dart';
-import '../features/authentication/presentation/pages/reset_password_page.dart';
-import '../features/authentication/presentation/pages/welcome_page.dart';
+import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
-class QuizApp extends StatelessWidget {
+class QuizApp extends StatefulWidget {
   const QuizApp({super.key, required this.authController});
 
   final AuthController authController;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QuizApp',
-
-      debugShowCheckedModeBanner: false,
-
-      theme: AppTheme.light,
-
-      onGenerateRoute: _onGenerateRoute,
-
-      home: AnimatedBuilder(
-        animation: authController,
-        builder: (context, child) {
-          switch (authController.status) {
-            case AuthStatus.initializing:
-              return const _AuthSplashPage();
-            case AuthStatus.authenticated:
-              return WelcomePage(authController: authController);
-            case AuthStatus.authenticating:
-            case AuthStatus.unauthenticated:
-              return LoginPage(authController: authController);
-          }
-        },
-      ),
-    );
-  }
-
-  Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
-    final uri = Uri.tryParse(settings.name ?? '/');
-    if (uri == null) {
-      return null;
-    }
-
-    switch (uri.path) {
-      case '/forgot-password':
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (_) => ForgotPasswordPage(authController: authController),
-        );
-      case '/reset-password':
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (_) => ResetPasswordPage(
-            authController: authController,
-            email: uri.queryParameters['email'] ?? '',
-            token: uri.queryParameters['token'] ?? '',
-          ),
-        );
-    }
-
-    return null;
-  }
+  State<QuizApp> createState() => _QuizAppState();
 }
 
-class _AuthSplashPage extends StatelessWidget {
-  const _AuthSplashPage();
+class _QuizAppState extends State<QuizApp> {
+  late final AppRouter _appRouter;
+
+  @override
+  void initState() {
+    super.initState();
+    _appRouter = AppRouter(authController: widget.authController);
+  }
+
+  @override
+  void dispose() {
+    _appRouter.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return MaterialApp.router(
+      title: 'QuizApp',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      routerConfig: _appRouter.router,
+    );
   }
 }

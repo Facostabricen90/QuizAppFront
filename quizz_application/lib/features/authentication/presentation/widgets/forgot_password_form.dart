@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/auth/auth_controller.dart';
@@ -92,7 +94,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
           ),
           AppGap.h24,
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.goNamed(AppRoutes.loginName),
             child: const Text('Volver al inicio de sesión'),
           ),
         ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../core/auth/auth_controller.dart';
@@ -7,7 +9,6 @@ import '../../../../shared/presentation/widgets/app_button.dart';
 import '../../../../shared/presentation/widgets/app_gap.dart';
 import '../../../../shared/presentation/widgets/app_password_field.dart';
 import '../../../../shared/presentation/widgets/app_text_field.dart';
-import '../pages/login_page.dart';
 
 class RegisterForm extends StatefulWidget {
   const RegisterForm({super.key, required this.authController});
@@ -71,7 +72,6 @@ class _RegisterFormState extends State<RegisterForm> {
     }
 
     if (success) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
       return;
     }
 
@@ -83,11 +83,7 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 
   void _goToLogin() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => LoginPage(authController: widget.authController),
-      ),
-    );
+    context.goNamed(AppRoutes.loginName);
   }
 
   String? _validateRequired(String? value, {required String fieldName}) {
