@@ -75,6 +75,7 @@ desktop.ini
 *.bak
 *.orig
 *.lock
+!Podfile.lock
 .cache/
 .gradle/
 .sass-cache/

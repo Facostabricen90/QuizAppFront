@@ -23,7 +23,7 @@ class AuthRepository {
     return _saveSessionFromResponse(response);
   }
 
-  Future<AuthSession> register({
+  Future<RegistrationResult> register({
     required String email,
     required String password,
     required String firstName,
@@ -39,7 +39,42 @@ class AuthRepository {
       },
     );
 
-    return _saveSessionFromResponse(response);
+    _ensureSuccess(response.statusCode, response);
+    final body = _decodeObject(response.body);
+    if (body['requiresEmailConfirmation'] == true) {
+      return const RegistrationResult(requiresEmailConfirmation: true);
+    }
+
+    final session = AuthSession.fromJson(body);
+    await _tokenStorage.saveSession(session);
+    return RegistrationResult(
+      requiresEmailConfirmation: false,
+      session: session,
+    );
+  }
+
+  Future<void> registerStaff({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    String role = 'Teacher',
+  }) async {
+    final response = await _apiClient.post(
+      '/api/auth/register-staff',
+      authenticated: true,
+      body: {
+        'email': email,
+        'password': password,
+        'firstName': firstName,
+        'lastName': lastName,
+        'role': role,
+      },
+    );
+
+    // El backend emite tokens para la cuenta creada. No se guardan aquí:
+    // la sesión activa debe continuar perteneciendo al administrador.
+    _ensureSuccess(response.statusCode, response);
   }
 
   Future<AuthUser> currentUser() async {
@@ -64,6 +99,25 @@ class AuthRepository {
     final response = await _apiClient.post(
       '/api/auth/reset-password',
       body: {'email': email, 'token': token, 'newPassword': newPassword},
+    );
+    _ensureSuccess(response.statusCode, response);
+  }
+
+  Future<void> confirmEmail({
+    required String email,
+    required String token,
+  }) async {
+    final response = await _apiClient.post(
+      '/api/auth/confirm-email',
+      body: {'email': email, 'token': token},
+    );
+    _ensureSuccess(response.statusCode, response);
+  }
+
+  Future<void> resendConfirmation({required String email}) async {
+    final response = await _apiClient.post(
+      '/api/auth/resend-confirmation',
+      body: {'email': email},
     );
     _ensureSuccess(response.statusCode, response);
   }

@@ -6,9 +6,11 @@ import '../../../../app/theme/app_layout.dart';
 class StudentBottomNavigation extends StatelessWidget {
   const StudentBottomNavigation({
     super.key,
+    this.selectedIndex = 0,
     required this.onDestinationSelected,
   });
 
+  final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
 
   @override
@@ -28,7 +30,7 @@ class StudentBottomNavigation extends StatelessWidget {
               maxWidth: AppLayout.maxBottomNavigationWidth,
             ),
             child: NavigationBar(
-              selectedIndex: 0,
+              selectedIndex: selectedIndex,
               backgroundColor: AppColors.surface,
               indicatorColor: AppColors.surfaceSecondary,
               onDestinationSelected: onDestinationSelected,

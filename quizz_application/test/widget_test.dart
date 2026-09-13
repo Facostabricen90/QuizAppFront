@@ -13,7 +13,7 @@ import 'package:quizz_application/core/security/token_storage.dart';
 import 'package:quizz_application/shared/presentation/widgets/app_gap.dart';
 
 void main() {
-  testWidgets('muestra la bienvenida para un profesor autenticado', (
+  testWidgets('muestra el panel administrativo para un profesor autenticado', (
     WidgetTester tester,
   ) async {
     final tokenStorage = TokenStorage();
@@ -34,7 +34,9 @@ void main() {
 
     await tester.pumpWidget(QuizApp(authController: authController));
 
-    expect(find.text('¡Bienvenido a QuizApp!'), findsOneWidget);
+    expect(find.text('Resumen docente'), findsOneWidget);
+    expect(find.text('Estudiantes activos'), findsOneWidget);
+    expect(find.text('Preguntas recientes'), findsOneWidget);
     expect(find.text('usuario@example.com'), findsOneWidget);
 
     apiClient.dispose();
@@ -224,7 +226,7 @@ void main() {
     ).go(AppRoutes.studentDashboard);
     await tester.pumpAndSettle();
 
-    expect(find.text('¡Bienvenido a QuizApp!'), findsOneWidget);
+    expect(find.text('Resumen administrativo'), findsOneWidget);
     expect(find.text('Tu progreso de hoy'), findsNothing);
 
     apiClient.dispose();

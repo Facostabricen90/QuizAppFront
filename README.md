@@ -13,6 +13,17 @@ Para desarrollo local:
 flutter run --dart-define=API_BASE_URL=https://localhost:7126
 ```
 
+Para probar en Flutter Web los enlaces enviados por correo para confirmar la
+cuenta o restablecer la contraseña, ejecuta el front en el puerto configurado
+por la API:
+
+```bash
+flutter run -d chrome --web-port=4200 --dart-define=API_BASE_URL=https://localhost:7126
+```
+
+La navegación web usa rutas limpias (`/confirm-email` y `/reset-password`) para
+que los enlaces del correo abran directamente la pantalla correspondiente.
+
 Para usar un archivo local de configuración, copia
 `config/env.example.json` como `config/env.json`, cambia únicamente la URL
 del entorno correspondiente y ejecuta:

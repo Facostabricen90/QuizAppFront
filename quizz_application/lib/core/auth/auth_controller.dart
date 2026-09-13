@@ -14,6 +14,7 @@ class AuthController extends ChangeNotifier {
   AuthStatus status = AuthStatus.initializing;
   AuthUser? currentUser;
   String? errorMessage;
+  String? registrationConfirmationEmail;
 
   Future<void> restoreSession() async {
     try {
@@ -42,14 +43,59 @@ class AuthController extends ChangeNotifier {
     required String firstName,
     required String lastName,
   }) async {
-    return _authenticate(() async {
-      await _repository.register(
+    status = AuthStatus.authenticating;
+    errorMessage = null;
+    registrationConfirmationEmail = null;
+    notifyListeners();
+
+    try {
+      final result = await _repository.register(
         email: email,
         password: password,
         firstName: firstName,
         lastName: lastName,
       );
-    });
+
+      if (result.requiresEmailConfirmation) {
+        currentUser = null;
+        status = AuthStatus.unauthenticated;
+        registrationConfirmationEmail = email;
+        notifyListeners();
+        return true;
+      }
+
+      currentUser = await _repository.currentUser();
+      status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (error, stackTrace) {
+      currentUser = null;
+      status = AuthStatus.unauthenticated;
+      errorMessage = _messageFor(error);
+      if (kDebugMode) {
+        debugPrint('Registration error: $error\n$stackTrace');
+      }
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> registerStaff({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    String role = 'Teacher',
+  }) {
+    return _runRecoveryOperation(
+      () => _repository.registerStaff(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        role: role,
+      ),
+    );
   }
 
   Future<void> logout() async {
@@ -79,6 +125,19 @@ class AuthController extends ChangeNotifier {
         token: token,
         newPassword: newPassword,
       ),
+      messageForError: _resetPasswordMessageFor,
+    );
+  }
+
+  Future<bool> confirmEmail({required String email, required String token}) {
+    return _runRecoveryOperation(
+      () => _repository.confirmEmail(email: email, token: token),
+    );
+  }
+
+  Future<bool> resendConfirmation({required String email}) {
+    return _runRecoveryOperation(
+      () => _repository.resendConfirmation(email: email),
     );
   }
 
@@ -92,6 +151,7 @@ class AuthController extends ChangeNotifier {
   Future<bool> _authenticate(Future<void> Function() operation) async {
     status = AuthStatus.authenticating;
     errorMessage = null;
+    registrationConfirmationEmail = null;
     notifyListeners();
 
     try {
@@ -100,24 +160,60 @@ class AuthController extends ChangeNotifier {
       status = AuthStatus.authenticated;
       notifyListeners();
       return true;
-    } catch (error) {
+    } catch (error, stackTrace) {
       status = AuthStatus.unauthenticated;
       errorMessage = _messageFor(error);
+
+      // Si el login recibió tokens pero falló al validar /me, elimina
+      // cualquier sesión parcial para que el siguiente intento empiece limpio.
+      try {
+        await _repository.clearLocalSession();
+      } catch (_) {
+        // No reemplazar el error original por un error de limpieza.
+      }
+
+      if (kDebugMode) {
+        debugPrint('Auth error: $error\n$stackTrace');
+      }
+
       notifyListeners();
       return false;
     }
   }
 
-  Future<bool> _runRecoveryOperation(Future<void> Function() operation) async {
+  Future<bool> _runRecoveryOperation(
+    Future<void> Function() operation, {
+    String Function(Object error)? messageForError,
+  }) async {
     errorMessage = null;
 
     try {
       await operation();
       return true;
     } catch (error) {
-      errorMessage = _messageFor(error);
+      errorMessage = messageForError?.call(error) ?? _messageFor(error);
       return false;
     }
+  }
+
+  String _resetPasswordMessageFor(Object error) {
+    if (error is ApiException) {
+      if (error.hasResponseDetails) {
+        return 'No se cambió la contraseña.\n${error.message}';
+      }
+
+      final statusCode = error.statusCode;
+      if (statusCode != null && statusCode >= 500) {
+        return 'No se cambió la contraseña. La API respondió con un error '
+            'interno ($statusCode), pero no envió un detalle que permita '
+            'identificar la causa. Puedes volver a intentarlo o solicitar un '
+            'enlace nuevo.';
+      }
+
+      return 'No se cambió la contraseña. ${error.message}';
+    }
+
+    return _messageFor(error);
   }
 
   String _messageFor(Object error) {

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../core/auth/auth_controller.dart';
+import '../core/network/api_client.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
 class QuizApp extends StatefulWidget {
-  const QuizApp({super.key, required this.authController});
+  const QuizApp({super.key, required this.authController, this.apiClient});
 
   final AuthController authController;
+  final ApiClient? apiClient;
 
   @override
   State<QuizApp> createState() => _QuizAppState();
@@ -19,7 +21,10 @@ class _QuizAppState extends State<QuizApp> {
   @override
   void initState() {
     super.initState();
-    _appRouter = AppRouter(authController: widget.authController);
+    _appRouter = AppRouter(
+      authController: widget.authController,
+      apiClient: widget.apiClient,
+    );
   }
 
   @override

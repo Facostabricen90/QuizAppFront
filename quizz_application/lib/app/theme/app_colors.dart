@@ -67,4 +67,26 @@ abstract final class AppColors {
   static const Color divider = Color(0xFFE8ECE8);
 
   static const Color disabled = Color(0xFFC5CEC8);
+
+  //==========================
+  // Admin dashboard
+  //==========================
+
+  static const Color adminBackground = Color(0xFFF6F6F4);
+
+  static const Color adminInk = Color(0xFF171917);
+
+  static const Color adminMuted = Color(0xFF7A7E7A);
+
+  static const Color adminSelected = Color(0xFFF0F1EF);
+
+  static const Color adminAvatar = Color(0xFFDDEBDF);
+
+  static const Color adminPurple = Color(0xFF7665A7);
+
+  static const Color adminOrange = Color(0xFFBC7B45);
+
+  static const Color adminBlue = Color(0xFF4D8292);
+
+  static const Color adminPositive = Color(0xFF328359);
 }

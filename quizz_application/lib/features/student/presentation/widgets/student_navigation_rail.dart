@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 
 class StudentNavigationRail extends StatelessWidget {
-  const StudentNavigationRail({super.key, required this.onDestinationSelected});
+  const StudentNavigationRail({
+    super.key,
+    this.selectedIndex = 0,
+    required this.onDestinationSelected,
+  });
 
+  final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
 
   @override
   Widget build(BuildContext context) {
     return NavigationRail(
-      selectedIndex: 0,
+      selectedIndex: selectedIndex,
       backgroundColor: AppColors.surface,
       indicatorColor: AppColors.surfaceSecondary,
       labelType: NavigationRailLabelType.all,

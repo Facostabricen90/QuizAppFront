@@ -17,19 +17,27 @@ class TokenStorage {
   final FlutterSecureStorage _storage;
 
   Future<void> saveSession(AuthSession session) async {
-    await Future.wait([
-      _storage.write(key: _accessTokenKey, value: session.accessToken),
-      _storage.write(key: _refreshTokenKey, value: session.refreshToken),
-      _storage.write(
+    // Algunos backends de almacenamiento seguro (especialmente en Web)
+    // no se inicializan de forma segura cuando reciben varias escrituras
+    // simultáneas. Guardar la sesión en orden evita que el primer login
+    // falle antes de que AuthRepository pueda llamar a /api/auth/me.
+    try {
+      await _storage.write(key: _accessTokenKey, value: session.accessToken);
+      await _storage.write(key: _refreshTokenKey, value: session.refreshToken);
+      await _storage.write(
         key: _accessExpiresAtKey,
         value: session.accessTokenExpiresAtUtc.toIso8601String(),
-      ),
-      _storage.write(
+      );
+      await _storage.write(
         key: _refreshExpiresAtKey,
         value: session.refreshTokenExpiresAtUtc.toIso8601String(),
-      ),
-      _storage.write(key: _rolesKey, value: jsonEncode(session.roles)),
-    ]);
+      );
+      await _storage.write(key: _rolesKey, value: jsonEncode(session.roles));
+    } catch (_) {
+      // Evita dejar una sesión incompleta si una de las escrituras falla.
+      await _clearBestEffort();
+      rethrow;
+    }
   }
 
   Future<String?> readAccessToken() {
@@ -41,12 +49,26 @@ class TokenStorage {
   }
 
   Future<void> clear() async {
-    await Future.wait([
-      _storage.delete(key: _accessTokenKey),
-      _storage.delete(key: _refreshTokenKey),
-      _storage.delete(key: _accessExpiresAtKey),
-      _storage.delete(key: _refreshExpiresAtKey),
-      _storage.delete(key: _rolesKey),
-    ]);
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _accessExpiresAtKey);
+    await _storage.delete(key: _refreshExpiresAtKey);
+    await _storage.delete(key: _rolesKey);
+  }
+
+  Future<void> _clearBestEffort() async {
+    for (final key in [
+      _accessTokenKey,
+      _refreshTokenKey,
+      _accessExpiresAtKey,
+      _refreshExpiresAtKey,
+      _rolesKey,
+    ]) {
+      try {
+        await _storage.delete(key: key);
+      } catch (_) {
+        // Conserva la excepción original de saveSession().
+      }
+    }
   }
 }

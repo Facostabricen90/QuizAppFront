@@ -10,6 +10,9 @@ abstract final class AppLayout {
   static const double expandedBreakpoint = 1024;
 
   static const double maxContentWidth = 1120;
+  static const double adminSidebarWidth = 236;
+  static const double adminSidebarBreakpoint = 960;
+  static const double adminMaxContentWidth = 1320;
   static const double maxBottomNavigationWidth = 760;
   static const double maxBottomNavigationHeight = 120;
 

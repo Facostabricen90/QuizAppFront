@@ -76,4 +76,38 @@ void main() {
 
     apiClient.dispose();
   });
+
+  test('confirma el correo usando los datos del enlace', () async {
+    late http.Request capturedRequest;
+    final client = MockClient((request) async {
+      capturedRequest = request;
+      return http.Response(
+        jsonEncode({'message': 'Correo confirmado correctamente.'}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    final tokenStorage = TokenStorage();
+    final apiClient = ApiClient(
+      tokenStorage: tokenStorage,
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+    final repository = AuthRepository(
+      apiClient: apiClient,
+      tokenStorage: tokenStorage,
+    );
+
+    await repository.confirmEmail(
+      email: 'ana@example.com',
+      token: 'confirmation-token',
+    );
+
+    expect(capturedRequest.url.path, '/api/auth/confirm-email');
+    expect(jsonDecode(capturedRequest.body), {
+      'email': 'ana@example.com',
+      'token': 'confirmation-token',
+    });
+    apiClient.dispose();
+  });
 }

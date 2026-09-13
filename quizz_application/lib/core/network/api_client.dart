@@ -39,6 +39,32 @@ class ApiClient {
     );
   }
 
+  Future<http.Response> put(
+    String path, {
+    Map<String, dynamic>? body,
+    bool authenticated = false,
+  }) {
+    return _request(
+      method: 'PUT',
+      path: path,
+      body: body,
+      authenticated: authenticated,
+    );
+  }
+
+  Future<http.Response> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    bool authenticated = false,
+  }) {
+    return _request(
+      method: 'DELETE',
+      path: path,
+      body: body,
+      authenticated: authenticated,
+    );
+  }
+
   Future<bool> tryRefreshSession() => _refreshTokens();
 
   Future<http.Response> _request({
@@ -95,7 +121,7 @@ class ApiClient {
       final streamedResponse = await _client
           .send(request)
           .timeout(const Duration(seconds: 20));
-      return http.Response.fromStream(streamedResponse);
+      return await http.Response.fromStream(streamedResponse);
     } on TimeoutException {
       throw const ApiException(
         message: 'El servidor tardó demasiado en responder.',

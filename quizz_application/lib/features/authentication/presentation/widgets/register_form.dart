@@ -31,6 +31,7 @@ class _RegisterFormState extends State<RegisterForm> {
   bool _acceptTerms = false;
   bool _showTermsError = false;
   bool _isLoading = false;
+  bool _registrationPending = false;
   String? _errorMessage;
 
   @override
@@ -68,6 +69,15 @@ class _RegisterFormState extends State<RegisterForm> {
     );
 
     if (!mounted) {
+      return;
+    }
+
+    if (success &&
+        widget.authController.registrationConfirmationEmail != null) {
+      setState(() {
+        _isLoading = false;
+        _registrationPending = true;
+      });
       return;
     }
 
@@ -133,6 +143,32 @@ class _RegisterFormState extends State<RegisterForm> {
 
   @override
   Widget build(BuildContext context) {
+    if (_registrationPending) {
+      return Column(
+        children: [
+          const Icon(
+            Icons.mark_email_unread_outlined,
+            size: 58,
+            color: AppColors.success,
+          ),
+          AppGap.h16,
+          const Text(
+            'Confirma tu correo',
+            textAlign: TextAlign.center,
+            style: AppTypography.headline,
+          ),
+          AppGap.h8,
+          Text(
+            'Enviamos un enlace de activación a ${widget.authController.registrationConfirmationEmail}.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium,
+          ),
+          AppGap.h24,
+          AppButton(text: 'Ir a iniciar sesión', onPressed: _goToLogin),
+        ],
+      );
+    }
+
     return AutofillGroup(
       child: Form(
         key: _formKey,

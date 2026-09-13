@@ -71,3 +71,13 @@ class AuthUser {
     );
   }
 }
+
+class RegistrationResult {
+  const RegistrationResult({
+    required this.requiresEmailConfirmation,
+    this.session,
+  });
+
+  final bool requiresEmailConfirmation;
+  final AuthSession? session;
+}

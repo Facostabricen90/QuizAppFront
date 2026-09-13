@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'app/app.dart';
 import 'core/auth/auth_controller.dart';
 import 'core/auth/auth_repository.dart';
+import 'core/config/app_url_strategy.dart';
 import 'core/network/api_client.dart';
 import 'core/security/token_storage.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  configureAppUrlStrategy();
 
   final tokenStorage = TokenStorage();
   final apiClient = ApiClient(tokenStorage: tokenStorage);
@@ -19,6 +21,6 @@ void main() {
   );
   final authController = AuthController(authRepository);
 
-  runApp(QuizApp(authController: authController));
+  runApp(QuizApp(authController: authController, apiClient: apiClient));
   unawaited(authController.restoreSession());
 }

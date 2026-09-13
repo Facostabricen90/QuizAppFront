@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/auth/auth_controller.dart';
+import '../../core/network/api_client.dart';
+import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
+import '../../features/authentication/presentation/pages/confirm_email_page.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
 import '../../features/authentication/presentation/pages/register_page.dart';
@@ -11,7 +14,7 @@ import '../../features/student/presentation/pages/student_dashboard_page.dart';
 import 'app_routes.dart';
 
 class AppRouter {
-  AppRouter({required AuthController authController})
+  AppRouter({required AuthController authController, ApiClient? apiClient})
     : router = GoRouter(
         refreshListenable: authController,
         routes: [
@@ -48,6 +51,15 @@ class AppRouter {
             ),
           ),
           GoRoute(
+            path: AppRoutes.confirmEmail,
+            name: AppRoutes.confirmEmailName,
+            builder: (context, state) => ConfirmEmailPage(
+              authController: authController,
+              email: state.uri.queryParameters['email'] ?? '',
+              token: state.uri.queryParameters['token'] ?? '',
+            ),
+          ),
+          GoRoute(
             path: AppRoutes.welcome,
             name: AppRoutes.welcomeName,
             builder: (context, state) =>
@@ -56,8 +68,18 @@ class AppRouter {
           GoRoute(
             path: AppRoutes.studentDashboard,
             name: AppRoutes.studentDashboardName,
-            builder: (context, state) =>
-                StudentDashboardPage(authController: authController),
+            builder: (context, state) => StudentDashboardPage(
+              authController: authController,
+              apiClient: apiClient,
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.adminDashboard,
+            name: AppRoutes.adminDashboardName,
+            builder: (context, state) => AdminDashboardPage(
+              authController: authController,
+              apiClient: apiClient,
+            ),
           ),
         ],
         redirect: (context, state) {
@@ -66,12 +88,15 @@ class AppRouter {
           final isSplash = location == AppRoutes.splash;
           final isWelcome = location == AppRoutes.welcome;
           final isStudentDashboard = location == AppRoutes.studentDashboard;
+          final isAdminDashboard = location == AppRoutes.adminDashboard;
           final isEntryRoute =
               location == AppRoutes.login || location == AppRoutes.register;
           final isRecoveryRoute =
               location == AppRoutes.forgotPassword ||
-              location == AppRoutes.resetPassword;
-          final isProtectedRoute = isWelcome || isStudentDashboard;
+              location == AppRoutes.resetPassword ||
+              location == AppRoutes.confirmEmail;
+          final isProtectedRoute =
+              isWelcome || isStudentDashboard || isAdminDashboard;
 
           if (status == AuthStatus.initializing) {
             if (isEntryRoute || isRecoveryRoute) {
@@ -86,18 +111,18 @@ class AppRouter {
                 authController.currentUser?.hasRole('Student') ?? false;
             final authenticatedHome = isStudent
                 ? AppRoutes.studentDashboard
-                : AppRoutes.welcome;
+                : AppRoutes.adminDashboard;
 
             if (isSplash || isEntryRoute) {
               return authenticatedHome;
             }
 
-            if (isStudent && isWelcome) {
+            if (isStudent && (isWelcome || isAdminDashboard)) {
               return AppRoutes.studentDashboard;
             }
 
-            if (!isStudent && isStudentDashboard) {
-              return AppRoutes.welcome;
+            if (!isStudent && (isStudentDashboard || isWelcome)) {
+              return AppRoutes.adminDashboard;
             }
 
             return null;
