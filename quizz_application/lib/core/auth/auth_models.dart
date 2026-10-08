@@ -1,3 +1,4 @@
+/// Tokens de sesión. No contiene datos del usuario — esos viven en [AuthUser].
 class AuthSession {
   const AuthSession({
     required this.tokenType,
@@ -5,7 +6,6 @@ class AuthSession {
     required this.accessTokenExpiresAtUtc,
     required this.refreshToken,
     required this.refreshTokenExpiresAtUtc,
-    required this.roles,
   });
 
   final String tokenType;
@@ -13,71 +13,100 @@ class AuthSession {
   final DateTime accessTokenExpiresAtUtc;
   final String refreshToken;
   final DateTime refreshTokenExpiresAtUtc;
-  final List<String> roles;
 
   factory AuthSession.fromJson(Map<String, dynamic> json) {
     final accessToken = json['accessToken'];
     final refreshToken = json['refreshToken'];
-    final accessExpiresAt = json['expiresAtUtc'];
+    final expiresAt = json['expiresAtUtc'];
     final refreshExpiresAt = json['refreshTokenExpiresAtUtc'];
 
     if (accessToken is! String ||
         refreshToken is! String ||
-        accessExpiresAt is! String ||
+        expiresAt is! String ||
         refreshExpiresAt is! String) {
       throw const FormatException('La respuesta de autenticación es inválida.');
     }
 
-    final roles = (json['roles'] as List<dynamic>? ?? const [])
-        .map((role) => role.toString())
-        .toList(growable: false);
-
     return AuthSession(
       tokenType: json['tokenType'] as String? ?? 'Bearer',
       accessToken: accessToken,
-      accessTokenExpiresAtUtc: DateTime.parse(accessExpiresAt).toUtc(),
+      accessTokenExpiresAtUtc: DateTime.parse(expiresAt).toUtc(),
       refreshToken: refreshToken,
       refreshTokenExpiresAtUtc: DateTime.parse(refreshExpiresAt).toUtc(),
-      roles: roles,
     );
   }
 }
 
+/// Datos públicos del usuario autenticado.
 class AuthUser {
   const AuthUser({
-    required this.userId,
+    required this.id,
     required this.email,
+    required this.firstName,
+    required this.lastName,
     required this.roles,
+    this.schoolId,
   });
 
-  final String userId;
+  final String id;
   final String email;
+  final String firstName;
+  final String lastName;
   final List<String> roles;
+  final String? schoolId;
+
+  String get fullName => '$firstName $lastName'.trim();
 
   bool hasRole(String role) {
-    final normalizedRole = role.toLowerCase();
-    return roles.any(
-      (currentRole) => currentRole.toLowerCase() == normalizedRole,
-    );
+    final normalized = role.toLowerCase();
+    return roles.any((r) => r.toLowerCase() == normalized);
   }
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
-      userId: json['userId']?.toString() ?? '',
+      id: json['id']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      firstName: json['firstName']?.toString() ?? '',
+      lastName: json['lastName']?.toString() ?? '',
       roles: (json['roles'] as List<dynamic>? ?? const [])
-          .map((role) => role.toString())
+          .map((r) => r.toString())
           .toList(growable: false),
+      schoolId: json['schoolId']?.toString(),
     );
   }
 }
 
-class RegistrationResult {
-  const RegistrationResult({
-    required this.requiresEmailConfirmation,
-    this.session,
-  });
+/// Respuesta de endpoints que emiten sesión completa (login, 2fa/verify, register-staff, google).
+/// Siempre incluye [session] y [user].
+class AuthResponse {
+  const AuthResponse({required this.session, required this.user});
 
-  final bool requiresEmailConfirmation;
-  final AuthSession? session;
+  final AuthSession session;
+  final AuthUser user;
+
+  factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    final userJson = json['user'];
+    if (userJson is! Map) {
+      throw const FormatException('La respuesta de autenticación es inválida.');
+    }
+
+    return AuthResponse(
+      session: AuthSession.fromJson(json),
+      user: AuthUser.fromJson(Map<String, dynamic>.from(userJson)),
+    );
+  }
+}
+
+/// Respuesta de endpoints que no emiten sesión y solo reportan un estado pendiente
+/// (ej: registro que requiere confirmar correo).
+class RegistrationPendingResponse {
+  const RegistrationPendingResponse({required this.message});
+
+  final String message;
+
+  factory RegistrationPendingResponse.fromJson(Map<String, dynamic> json) {
+    return RegistrationPendingResponse(
+      message: json['message']?.toString() ?? '',
+    );
+  }
 }

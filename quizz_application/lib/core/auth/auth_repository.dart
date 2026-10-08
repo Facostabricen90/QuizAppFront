@@ -11,7 +11,7 @@ class AuthRepository {
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
 
-  Future<AuthSession> login({
+  Future<AuthUser> login({
     required String email,
     required String password,
   }) async {
@@ -19,11 +19,10 @@ class AuthRepository {
       '/api/auth/login',
       body: {'email': email, 'password': password},
     );
-
-    return _saveSessionFromResponse(response);
+    return _persistAndReturnUser(response);
   }
 
-  Future<RegistrationResult> register({
+  Future<RegistrationPendingResponse> register({
     required String email,
     required String password,
     required String firstName,
@@ -38,19 +37,8 @@ class AuthRepository {
         'lastName': lastName,
       },
     );
-
     _ensureSuccess(response.statusCode, response);
-    final body = _decodeObject(response.body);
-    if (body['requiresEmailConfirmation'] == true) {
-      return const RegistrationResult(requiresEmailConfirmation: true);
-    }
-
-    final session = AuthSession.fromJson(body);
-    await _tokenStorage.saveSession(session);
-    return RegistrationResult(
-      requiresEmailConfirmation: false,
-      session: session,
-    );
+    return RegistrationPendingResponse.fromJson(_decodeObject(response.body));
   }
 
   Future<void> registerStaff({
@@ -71,14 +59,11 @@ class AuthRepository {
         'role': role,
       },
     );
-
-    // El backend emite tokens para la cuenta creada. No se guardan aquí:
-    // la sesión activa debe continuar perteneciendo al administrador.
     _ensureSuccess(response.statusCode, response);
   }
 
-  Future<AuthUser> currentUser() async {
-    final response = await _apiClient.get('/api/auth/me', authenticated: true);
+  Future<AuthUser> session() async {
+    final response = await _apiClient.get('/api/auth/session', authenticated: true);
     _ensureSuccess(response.statusCode, response);
     return AuthUser.fromJson(_decodeObject(response.body));
   }
@@ -99,6 +84,24 @@ class AuthRepository {
     final response = await _apiClient.post(
       '/api/auth/reset-password',
       body: {'email': email, 'token': token, 'newPassword': newPassword},
+    );
+    _ensureSuccess(response.statusCode, response);
+  }
+
+  /// Cambio de contraseña para un usuario autenticado.
+  /// Requiere la contraseña actual. Al completarse, el backend revoca
+  /// todos los refresh tokens activos; el front debe limpiar la sesión local.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _apiClient.post(
+      '/api/auth/change-password',
+      authenticated: true,
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
     );
     _ensureSuccess(response.statusCode, response);
   }
@@ -134,7 +137,7 @@ class AuthRepository {
     }
 
     try {
-      return await currentUser();
+      return await session();
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
         await _tokenStorage.clear();
@@ -163,11 +166,13 @@ class AuthRepository {
     return _tokenStorage.clear();
   }
 
-  Future<AuthSession> _saveSessionFromResponse(dynamic response) async {
+  Future<AuthUser> _persistAndReturnUser(dynamic response) async {
     _ensureSuccess(response.statusCode, response);
-    final session = AuthSession.fromJson(_decodeObject(response.body));
-    await _tokenStorage.saveSession(session);
-    return session;
+    final body = _decodeObject(response.body);
+    final authResponse = AuthResponse.fromJson(body);
+
+    await _tokenStorage.saveSession(authResponse.session);
+    return authResponse.user;
   }
 
   Map<String, dynamic> _decodeObject(String body) {
@@ -175,7 +180,6 @@ class AuthRepository {
     if (decoded is! Map) {
       throw const FormatException('La respuesta de la API es inválida.');
     }
-
     return Map<String, dynamic>.from(decoded);
   }
 

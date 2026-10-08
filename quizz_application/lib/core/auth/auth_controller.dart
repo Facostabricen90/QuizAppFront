@@ -6,6 +6,19 @@ import 'auth_repository.dart';
 
 enum AuthStatus { initializing, unauthenticated, authenticating, authenticated }
 
+/// Resultado de la operación de cambio de contraseña.
+/// Se usa para distinguir errores de validación (contraseña actual incorrecta,
+/// contraseña nueva igual a la actual) de errores genéricos de red.
+class ChangePasswordResult {
+  const ChangePasswordResult.success()
+      : success = true;
+
+  const ChangePasswordResult.failure()
+      : success = false;
+
+  final bool success;
+}
+
 class AuthController extends ChangeNotifier {
   AuthController(this._repository);
 
@@ -33,7 +46,7 @@ class AuthController extends ChangeNotifier {
 
   Future<bool> login({required String email, required String password}) async {
     return _authenticate(() async {
-      await _repository.login(email: email, password: password);
+      currentUser = await _repository.login(email: email, password: password);
     });
   }
 
@@ -49,23 +62,16 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _repository.register(
+      await _repository.register(
         email: email,
         password: password,
         firstName: firstName,
         lastName: lastName,
       );
 
-      if (result.requiresEmailConfirmation) {
-        currentUser = null;
-        status = AuthStatus.unauthenticated;
-        registrationConfirmationEmail = email;
-        notifyListeners();
-        return true;
-      }
-
-      currentUser = await _repository.currentUser();
-      status = AuthStatus.authenticated;
+      currentUser = null;
+      status = AuthStatus.unauthenticated;
+      registrationConfirmationEmail = email;
       notifyListeners();
       return true;
     } catch (error, stackTrace) {
@@ -96,6 +102,28 @@ class AuthController extends ChangeNotifier {
         role: role,
       ),
     );
+  }
+
+  /// Cambia la contraseña del usuario autenticado.
+  /// No cierra la sesión automáticamente: el backend revocó los refresh tokens
+  /// en otros dispositivos, pero el access token actual sigue vivo hasta expirar.
+  /// La pantalla decide qué mostrar tras el éxito.
+  Future<ChangePasswordResult> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    errorMessage = null;
+
+    try {
+      await _repository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      return const ChangePasswordResult.success();
+    } catch (error) {
+      errorMessage = _messageFor(error);
+      return const ChangePasswordResult.failure();
+    }
   }
 
   Future<void> logout() async {
@@ -156,16 +184,14 @@ class AuthController extends ChangeNotifier {
 
     try {
       await operation();
-      currentUser = await _repository.currentUser();
       status = AuthStatus.authenticated;
       notifyListeners();
       return true;
     } catch (error, stackTrace) {
       status = AuthStatus.unauthenticated;
+      currentUser = null;
       errorMessage = _messageFor(error);
 
-      // Si el login recibió tokens pero falló al validar /me, elimina
-      // cualquier sesión parcial para que el siguiente intento empiece limpio.
       try {
         await _repository.clearLocalSession();
       } catch (_) {

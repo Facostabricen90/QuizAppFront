@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_layout.dart';
 import '../../../../app/theme/app_radius.dart';
@@ -333,28 +335,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Future<void> _sendPasswordReset() async {
-    final email = widget.authController.currentUser?.email;
-    if (email == null || email.isEmpty) {
-      return;
-    }
-    setState(() => _mutating = true);
-    final success = await widget.authController.requestPasswordReset(
-      email: email,
-    );
-    if (!mounted) {
-      return;
-    }
-    setState(() => _mutating = false);
-    _showMessage(
-      success
-          ? 'Revisa tu correo para cambiar la contraseña.'
-          : widget.authController.errorMessage ??
-                'No se pudo enviar el enlace.',
-      error: !success,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = widget.authController.currentUser!;
@@ -410,7 +390,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         onCreateSchool: _openSchool,
                         onEditSchool: _openSchool,
                         onDeleteSchool: _deleteSchool,
-                        onPasswordReset: _sendPasswordReset,
                         onLogout: widget.authController.logout,
                       ),
                     ),
@@ -642,7 +621,6 @@ class _MainArea extends StatelessWidget {
     required this.onCreateSchool,
     required this.onEditSchool,
     required this.onDeleteSchool,
-    required this.onPasswordReset,
     required this.onLogout,
   });
 
@@ -669,7 +647,6 @@ class _MainArea extends StatelessWidget {
   final VoidCallback onCreateSchool;
   final ValueChanged<SchoolModel> onEditSchool;
   final ValueChanged<SchoolModel> onDeleteSchool;
-  final VoidCallback onPasswordReset;
   final VoidCallback onLogout;
 
   @override
@@ -769,7 +746,6 @@ class _MainArea extends StatelessWidget {
       _AdminSection.account => _AccountPanel(
         email: userEmail,
         roles: roles,
-        onPasswordReset: onPasswordReset,
         onLogout: onLogout,
       ),
     };
@@ -1658,13 +1634,11 @@ class _AccountPanel extends StatelessWidget {
   const _AccountPanel({
     required this.email,
     required this.roles,
-    required this.onPasswordReset,
     required this.onLogout,
   });
 
   final String email;
   final List<String> roles;
-  final VoidCallback onPasswordReset;
   final VoidCallback onLogout;
 
   @override
@@ -1698,16 +1672,17 @@ class _AccountPanel extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               const Text(
-                'Enviaremos un enlace seguro al correo de esta cuenta. El proceso utiliza el mismo flujo de recuperación del inicio de sesión.',
+                'Actualiza tu contraseña confirmando la actual. Se cerrarán las demás sesiones activas por seguridad.',
                 style: AppTypography.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.md),
               Align(
                 alignment: Alignment.centerLeft,
                 child: FilledButton.icon(
-                  onPressed: onPasswordReset,
-                  icon: const Icon(Icons.mark_email_unread_outlined),
-                  label: const Text('Enviar enlace de cambio'),
+                  onPressed: () =>
+                      context.pushNamed(AppRoutes.changePasswordName),
+                  icon: const Icon(Icons.lock_reset_rounded),
+                  label: const Text('Cambiar contraseña'),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),

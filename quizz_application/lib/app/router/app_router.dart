@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_controller.dart';
 import '../../core/network/api_client.dart';
 import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
+import '../../features/authentication/presentation/pages/change_password_page.dart';
 import '../../features/authentication/presentation/pages/confirm_email_page.dart';
 import '../../features/authentication/presentation/pages/forgot_password_page.dart';
 import '../../features/authentication/presentation/pages/login_page.dart';
@@ -60,6 +61,12 @@ class AppRouter {
             ),
           ),
           GoRoute(
+            path: AppRoutes.changePassword,
+            name: AppRoutes.changePasswordName,
+            builder: (context, state) =>
+                ChangePasswordPage(authController: authController),
+          ),
+          GoRoute(
             path: AppRoutes.welcome,
             name: AppRoutes.welcomeName,
             builder: (context, state) =>
@@ -95,14 +102,17 @@ class AppRouter {
               location == AppRoutes.forgotPassword ||
               location == AppRoutes.resetPassword ||
               location == AppRoutes.confirmEmail;
+          // change-password requiere sesión activa: NO va aquí.
           final isProtectedRoute =
-              isWelcome || isStudentDashboard || isAdminDashboard;
+              isWelcome ||
+              isStudentDashboard ||
+              isAdminDashboard ||
+              location == AppRoutes.changePassword;
 
           if (status == AuthStatus.initializing) {
             if (isEntryRoute || isRecoveryRoute) {
               return null;
             }
-
             return isSplash ? null : AppRoutes.splash;
           }
 
@@ -128,6 +138,7 @@ class AppRouter {
             return null;
           }
 
+          // No autenticado: rutas protegidas → login. Recovery y entry → permitir.
           return isSplash || isProtectedRoute ? AppRoutes.login : null;
         },
       );

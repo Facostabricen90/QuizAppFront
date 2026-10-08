@@ -48,7 +48,9 @@ void main() {
         lastName: 'Pérez',
       );
 
-      expect(result.requiresEmailConfirmation, isTrue);
+      // El backend devuelve un mensaje de confirmación; el registro público
+      // nunca emite sesión (debe confirmarse el correo primero).
+      expect(result.message, isNotEmpty);
       expect(storage.savedSessions, 0);
       expect(capturedRequest.url.path, '/api/auth/register');
       expect(jsonDecode(capturedRequest.body), {
@@ -65,8 +67,13 @@ void main() {
     'el controlador espera la confirmación antes de iniciar sesión',
     () async {
       final client = MockClient(
-        (_) async =>
-            http.Response(jsonEncode({'requiresEmailConfirmation': true}), 200),
+        (_) async => http.Response(
+          jsonEncode({
+            'requiresEmailConfirmation': true,
+            'message': 'Revisa tu correo.',
+          }),
+          200,
+        ),
       );
       final storage = _MemoryTokenStorage();
       final apiClient = ApiClient(
@@ -100,7 +107,7 @@ void main() {
     late http.Request capturedRequest;
     final client = MockClient((request) async {
       capturedRequest = request;
-      return http.Response(jsonEncode(_tokenResponse(['Teacher'])), 200);
+      return http.Response(jsonEncode(_authResponse(role: 'Teacher')), 200);
     });
     final storage = _MemoryTokenStorage(accessToken: 'admin-access-token');
     final apiClient = ApiClient(
@@ -132,6 +139,7 @@ void main() {
       'lastName': 'Gómez',
       'role': 'Teacher',
     });
+    // La sesión del admin no debe sobrescribirse con la del profesor creado.
     expect(storage.savedSessions, 0);
     apiClient.dispose();
   });
@@ -363,14 +371,23 @@ void main() {
   });
 }
 
-Map<String, dynamic> _tokenResponse(List<String> roles) {
+/// Respuesta completa de un endpoint que emite sesión (login, register-staff, 2fa/verify).
+/// Refleja el contrato actual: tokens + user anidado.
+Map<String, dynamic> _authResponse({required String role}) {
   return {
     'tokenType': 'Bearer',
     'accessToken': 'new-access-token',
     'expiresAtUtc': '2026-09-10T18:00:00Z',
     'refreshToken': 'new-refresh-token',
     'refreshTokenExpiresAtUtc': '2026-09-24T18:00:00Z',
-    'roles': roles,
+    'user': {
+      'id': 'user-id',
+      'email': 'user@example.com',
+      'firstName': 'Test',
+      'lastName': 'User',
+      'roles': [role],
+      'schoolId': null,
+    },
   };
 }
 

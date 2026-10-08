@@ -25,10 +25,10 @@ void main() {
         AuthController(
             AuthRepository(apiClient: apiClient, tokenStorage: tokenStorage),
           )
-          ..currentUser = const AuthUser(
-            userId: 'test-user',
+          ..currentUser = _testUser(
+            id: 'test-user',
             email: 'usuario@example.com',
-            roles: ['Teacher'],
+            roles: const ['Teacher'],
           )
           ..status = AuthStatus.authenticated;
 
@@ -184,10 +184,10 @@ void main() {
         AuthController(
             AuthRepository(apiClient: apiClient, tokenStorage: tokenStorage),
           )
-          ..currentUser = const AuthUser(
-            userId: 'test-user',
+          ..currentUser = _testUser(
+            id: 'test-user',
             email: 'usuario@example.com',
-            roles: ['Student'],
+            roles: const ['Student'],
           )
           ..status = AuthStatus.authenticated;
 
@@ -213,10 +213,10 @@ void main() {
         AuthController(
             AuthRepository(apiClient: apiClient, tokenStorage: tokenStorage),
           )
-          ..currentUser = const AuthUser(
-            userId: 'admin-user',
+          ..currentUser = _testUser(
+            id: 'admin-user',
             email: 'admin@example.com',
-            roles: ['Admin'],
+            roles: const ['Admin'],
           )
           ..status = AuthStatus.authenticated;
 
@@ -249,10 +249,10 @@ void main() {
         AuthController(
             AuthRepository(apiClient: apiClient, tokenStorage: tokenStorage),
           )
-          ..currentUser = const AuthUser(
-            userId: 'student-user',
+          ..currentUser = _testUser(
+            id: 'student-user',
             email: 'estudiante@example.com',
-            roles: ['Student'],
+            roles: const ['Student'],
           )
           ..status = AuthStatus.authenticated;
 
@@ -294,10 +294,10 @@ void main() {
         AuthController(
             AuthRepository(apiClient: apiClient, tokenStorage: tokenStorage),
           )
-          ..currentUser = const AuthUser(
-            userId: 'web-student',
+          ..currentUser = _testUser(
+            id: 'web-student',
             email: 'estudiante@example.com',
-            roles: ['Student'],
+            roles: const ['Student'],
           )
           ..status = AuthStatus.authenticated;
 
@@ -324,12 +324,33 @@ class _SuccessfulAuthController extends AuthController {
     required String lastName,
   }) async {
     currentUser = AuthUser(
-      userId: 'registered-user',
+      id: 'registered-user',
       email: email,
+      firstName: firstName,
+      lastName: lastName,
       roles: const ['Student'],
     );
     status = AuthStatus.authenticated;
     notifyListeners();
     return true;
   }
+}
+
+/// Helper para construir [AuthUser] en tests sin repetir campos obligatorios.
+AuthUser _testUser({
+  required String id,
+  required String email,
+  required List<String> roles,
+  String firstName = 'Test',
+  String lastName = 'User',
+  String? schoolId,
+}) {
+  return AuthUser(
+    id: id,
+    email: email,
+    firstName: firstName,
+    lastName: lastName,
+    roles: roles,
+    schoolId: schoolId,
+  );
 }

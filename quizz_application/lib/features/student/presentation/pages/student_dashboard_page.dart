@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_layout.dart';
 import '../../../../app/theme/app_radius.dart';
@@ -69,7 +71,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   List<SubjectModel> _subjects = const [];
   List<PracticeSessionModel> _sessions = const [];
   bool _loading = false;
-  bool _sendingReset = false;
   String? _errorMessage;
   int _selectedIndex = 0;
 
@@ -165,28 +166,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       return;
     }
     _startPractice(_subjects.first, questionCount: 10);
-  }
-
-  Future<void> _requestPasswordReset() async {
-    final email = widget.authController.currentUser?.email;
-    if (email == null || email.isEmpty || _sendingReset) {
-      return;
-    }
-    setState(() => _sendingReset = true);
-    final success = await widget.authController.requestPasswordReset(
-      email: email,
-    );
-    if (!mounted) {
-      return;
-    }
-    setState(() => _sendingReset = false);
-    _showMessage(
-      success
-          ? 'Revisa tu correo para cambiar la contraseña.'
-          : widget.authController.errorMessage ??
-                'No se pudo enviar el enlace.',
-      error: !success,
-    );
   }
 
   void _showMessage(String message, {bool error = false}) {
@@ -294,8 +273,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       2 => _ProgressView(sessions: _sessions),
       3 => _ProfileView(
         email: email,
-        sendingReset: _sendingReset,
-        onPasswordReset: _requestPasswordReset,
         onLogout: widget.authController.logout,
       ),
       _ => _HomeView(
@@ -572,14 +549,10 @@ class _SessionTile extends StatelessWidget {
 class _ProfileView extends StatelessWidget {
   const _ProfileView({
     required this.email,
-    required this.sendingReset,
-    required this.onPasswordReset,
     required this.onLogout,
   });
 
   final String email;
-  final bool sendingReset;
-  final VoidCallback onPasswordReset;
   final VoidCallback onLogout;
 
   @override
@@ -613,24 +586,16 @@ class _ProfileView extends StatelessWidget {
               Text('Seguridad', style: AppTypography.headline),
               AppGap.h8,
               const Text(
-                'Recibe en tu correo un enlace seguro para definir una nueva contraseña.',
+                'Actualiza tu contraseña confirmando la actual. Se cerrarán las demás sesiones activas por seguridad.',
                 style: AppTypography.bodyMedium,
               ),
               AppGap.h16,
               Align(
                 alignment: Alignment.centerLeft,
                 child: FilledButton.icon(
-                  onPressed: sendingReset ? null : onPasswordReset,
-                  icon: sendingReset
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.mark_email_unread_outlined),
+                  onPressed: () =>
+                      context.pushNamed(AppRoutes.changePasswordName),
+                  icon: const Icon(Icons.lock_reset_rounded),
                   label: const Text('Cambiar contraseña'),
                 ),
               ),

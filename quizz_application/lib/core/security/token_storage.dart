@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../auth/auth_models.dart';
@@ -12,7 +10,11 @@ class TokenStorage {
   static const _refreshTokenKey = 'auth.refreshToken';
   static const _accessExpiresAtKey = 'auth.accessExpiresAtUtc';
   static const _refreshExpiresAtKey = 'auth.refreshExpiresAtUtc';
-  static const _rolesKey = 'auth.roles';
+
+  // Los roles ya no se persisten: se obtienen del backend en cada restoreSession()
+  // a través de /api/auth/session. Persistirlos aquí los dejaría "stale" si un admin
+  // cambia los roles del usuario.
+  static const _legacyRolesKey = 'auth.roles';
 
   final FlutterSecureStorage _storage;
 
@@ -20,7 +22,7 @@ class TokenStorage {
     // Algunos backends de almacenamiento seguro (especialmente en Web)
     // no se inicializan de forma segura cuando reciben varias escrituras
     // simultáneas. Guardar la sesión en orden evita que el primer login
-    // falle antes de que AuthRepository pueda llamar a /api/auth/me.
+    // falle antes de que AuthRepository pueda consultar /api/auth/session.
     try {
       await _storage.write(key: _accessTokenKey, value: session.accessToken);
       await _storage.write(key: _refreshTokenKey, value: session.refreshToken);
@@ -32,7 +34,6 @@ class TokenStorage {
         key: _refreshExpiresAtKey,
         value: session.refreshTokenExpiresAtUtc.toIso8601String(),
       );
-      await _storage.write(key: _rolesKey, value: jsonEncode(session.roles));
     } catch (_) {
       // Evita dejar una sesión incompleta si una de las escrituras falla.
       await _clearBestEffort();
@@ -53,7 +54,9 @@ class TokenStorage {
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _accessExpiresAtKey);
     await _storage.delete(key: _refreshExpiresAtKey);
-    await _storage.delete(key: _rolesKey);
+
+    // Limpieza de sesiones antiguas: versiones previas guardaban roles en disco.
+    await _storage.delete(key: _legacyRolesKey);
   }
 
   Future<void> _clearBestEffort() async {
@@ -62,7 +65,7 @@ class TokenStorage {
       _refreshTokenKey,
       _accessExpiresAtKey,
       _refreshExpiresAtKey,
-      _rolesKey,
+      _legacyRolesKey,
     ]) {
       try {
         await _storage.delete(key: key);
