@@ -106,10 +106,6 @@ class ContentRepository {
     _ensureSuccess(response);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Códigos de invitación
-  // ─────────────────────────────────────────────────────────────
-
   Future<List<InvitationCodeModel>> getInvitationCodes() async {
     final response =
         await _apiClient.get('/api/invitation-codes', authenticated: true);
@@ -165,11 +161,6 @@ class ContentRepository {
     _ensureSuccess(response);
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Planes y suscripciones
-  // ─────────────────────────────────────────────────────────────
-
-  /// Catálogo de planes activos. `target` puede ser "Particular" o "Institutional".
   Future<List<PlanModel>> getPlans({String? target}) async {
     final query = target == null || target.isEmpty
         ? ''
@@ -179,13 +170,11 @@ class ContentRepository {
     return _decodeList(response.body, PlanModel.fromJson);
   }
 
-  /// Suscripción relevante para el usuario autenticado.
-  /// Devuelve null si el usuario no tiene ninguna suscripción.
-    Future<SubscriptionModel?> getMySubscription() async {
-      final response = await _apiClient.get(
-        '/api/subscriptions/current',
-        authenticated: true,
-      );
+  Future<SubscriptionModel?> getMySubscription() async {
+    final response = await _apiClient.get(
+      '/api/subscriptions/current',
+      authenticated: true,
+    );
 
     if (response.statusCode == 404) return null;
     _ensureSuccess(response);
@@ -199,10 +188,14 @@ class ContentRepository {
     return SubscriptionModel.fromJson(Map<String, dynamic>.from(decoded));
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────────────────────────
-
+  // NUEVO MÉTODO
+  Future<ReportResponseModel> getStudentReports() async {
+    final response =
+        await _apiClient.get('/api/reports/students', authenticated: true);
+    _ensureSuccess(response);
+    return ReportResponseModel.fromJson(_decodeObject(response.body));
+  }
+  
   List<T> _decodeList<T>(
     String body,
     T Function(Map<String, dynamic>) fromJson,

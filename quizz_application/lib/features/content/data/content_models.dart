@@ -148,7 +148,6 @@ class QuestionDraft {
   }
 }
 
-/// Modelo de un código de invitación institucional.
 class InvitationCodeModel {
   const InvitationCodeModel({
     required this.id,
@@ -210,11 +209,6 @@ class InvitationCodeModel {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// PLANES Y SUSCRIPCIONES
-// ─────────────────────────────────────────────────────────────
-
-/// Plan del catálogo (FREE, STANDARD, SEMESTRAL, INSTITUTIONAL).
 class PlanModel {
   const PlanModel({
     required this.id,
@@ -233,8 +227,6 @@ class PlanModel {
   final String code;
   final String name;
   final String? description;
-
-  /// "Particular" o "Institutional"
   final String target;
   final int durationDays;
   final double price;
@@ -246,7 +238,6 @@ class PlanModel {
   bool get isParticular => target == 'Particular';
   bool get isInstitutional => target == 'Institutional';
 
-  /// Precio formateado en pesos colombianos. Ej: "$29.900 COP" o "Gratis".
   String get priceLabel {
     if (isFree) return 'Gratis';
     final formatted = price.toStringAsFixed(0).replaceAllMapped(
@@ -256,7 +247,6 @@ class PlanModel {
     return '\$$formatted $currency';
   }
 
-  /// Duración legible. Ej: "7 días", "1 mes", "6 meses", "1 año".
   String get durationLabel {
     if (durationDays == 7) return '7 días';
     if (durationDays == 30) return '1 mes';
@@ -282,7 +272,6 @@ class PlanModel {
   }
 }
 
-/// Suscripción activa (o pasada) del usuario o su institución.
 class SubscriptionModel {
   const SubscriptionModel({
     required this.id,
@@ -303,8 +292,6 @@ class SubscriptionModel {
   });
 
   final String id;
-
-  /// "Particular" o "Institutional"
   final String ownerType;
   final String? userId;
   final String? institutionId;
@@ -312,8 +299,6 @@ class SubscriptionModel {
   final String planId;
   final String planCode;
   final String planName;
-
-  /// "Pending", "Active", "Expired", "Cancelled", "PastDue"
   final String status;
   final DateTime startedAtUtc;
   final DateTime expiresAtUtc;
@@ -328,7 +313,6 @@ class SubscriptionModel {
   bool get isCancelled => status == 'Cancelled';
   bool get isPending => status == 'Pending';
 
-  /// Etiqueta legible del estado.
   String get statusLabel {
     return switch (status) {
       'Pending' => 'Pendiente',
@@ -340,7 +324,6 @@ class SubscriptionModel {
     };
   }
 
-  /// Texto de días restantes o vencimiento.
   String get remainingLabel {
     if (daysRemaining < 0) {
       final days = daysRemaining.abs();
@@ -377,5 +360,65 @@ class SubscriptionModel {
     } catch (_) {
       return null;
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// NUEVO: Reportes
+// ─────────────────────────────────────────────────────────────
+class StudentReportModel {
+  const StudentReportModel({
+    required this.studentId,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    required this.totalAnswered,
+    required this.correctAnswers,
+    required this.scorePercentage,
+  });
+
+  final String studentId;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final int totalAnswered;
+  final int correctAnswers;
+  final double scorePercentage;
+
+  String get fullName => '$firstName $lastName'.trim();
+
+  factory StudentReportModel.fromJson(Map<String, dynamic> json) {
+    return StudentReportModel(
+      studentId: json['studentId']?.toString() ?? '',
+      firstName: json['firstName']?.toString() ?? '',
+      lastName: json['lastName']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      totalAnswered: (json['totalAnswered'] as num?)?.toInt() ?? 0,
+      correctAnswers: (json['correctAnswers'] as num?)?.toInt() ?? 0,
+      scorePercentage: (json['scorePercentage'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+class ReportResponseModel {
+  const ReportResponseModel({
+    required this.institutionName,
+    required this.students,
+  });
+
+  final String? institutionName;
+  final List<StudentReportModel> students;
+
+  factory ReportResponseModel.fromJson(Map<String, dynamic> json) {
+    final rawStudents = json['students'];
+    return ReportResponseModel(
+      institutionName: json['institutionName']?.toString(),
+      students: rawStudents is List
+          ? rawStudents
+              .whereType<Map>()
+              .map((s) => StudentReportModel.fromJson(Map<String, dynamic>.from(s)))
+              .toList(growable: false)
+          : const [],
+    );
   }
 }
