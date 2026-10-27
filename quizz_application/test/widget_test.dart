@@ -322,6 +322,7 @@ class _SuccessfulAuthController extends AuthController {
     required String password,
     required String firstName,
     required String lastName,
+    String? invitationCode,
   }) async {
     currentUser = AuthUser(
       id: 'registered-user',
@@ -329,6 +330,9 @@ class _SuccessfulAuthController extends AuthController {
       firstName: firstName,
       lastName: lastName,
       roles: const ['Student'],
+      type: invitationCode != null && invitationCode.isNotEmpty
+          ? 'Institutional'
+          : 'Particular',
     );
     status = AuthStatus.authenticated;
     notifyListeners();
@@ -337,12 +341,14 @@ class _SuccessfulAuthController extends AuthController {
 }
 
 /// Helper para construir [AuthUser] en tests sin repetir campos obligatorios.
+/// Por defecto crea un usuario Particular sin institución.
 AuthUser _testUser({
   required String id,
   required String email,
   required List<String> roles,
   String firstName = 'Test',
   String lastName = 'User',
+  String type = 'Particular',
   String? schoolId,
 }) {
   return AuthUser(
@@ -351,6 +357,7 @@ AuthUser _testUser({
     firstName: firstName,
     lastName: lastName,
     roles: roles,
+    type: type,
     schoolId: schoolId,
   );
 }

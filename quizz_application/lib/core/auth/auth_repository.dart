@@ -27,6 +27,7 @@ class AuthRepository {
     required String password,
     required String firstName,
     required String lastName,
+    String? invitationCode,
   }) async {
     final response = await _apiClient.post(
       '/api/auth/register',
@@ -35,6 +36,8 @@ class AuthRepository {
         'password': password,
         'firstName': firstName,
         'lastName': lastName,
+        if (invitationCode != null && invitationCode.trim().isNotEmpty)
+          'invitationCode': invitationCode.trim(),
       },
     );
     _ensureSuccess(response.statusCode, response);
@@ -88,9 +91,6 @@ class AuthRepository {
     _ensureSuccess(response.statusCode, response);
   }
 
-  /// Cambio de contraseña para un usuario autenticado.
-  /// Requiere la contraseña actual. Al completarse, el backend revoca
-  /// todos los refresh tokens activos; el front debe limpiar la sesión local.
   Future<void> changePassword({
     required String currentPassword,
     required String newPassword,

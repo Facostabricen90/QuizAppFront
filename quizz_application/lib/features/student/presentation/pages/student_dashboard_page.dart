@@ -112,18 +112,14 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       final sessionsFuture = practiceRepository.getMySessions();
       final subjects = await subjectsFuture;
       final sessions = await sessionsFuture;
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _subjects = subjects;
         _sessions = sessions;
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _errorMessage = _messageFor(error);
@@ -513,9 +509,8 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final answered = session.questions
-        .where((question) => question.answered)
-        .length;
+    final answered =
+        session.questions.where((question) => question.answered).length;
     final date = session.startedAtUtc?.toLocal();
     final dateLabel = date == null
         ? 'Fecha no disponible'
@@ -581,6 +576,25 @@ class _ProfileView extends StatelessWidget {
                 title: const Text('Estudiante'),
                 subtitle: Text(email),
               ),
+              const Divider(),
+              AppGap.h16,
+              Text('Suscripción', style: AppTypography.headline),
+              AppGap.h8,
+              const Text(
+                'Consulta tu plan actual, los días restantes y las opciones de mejora.',
+                style: AppTypography.bodyMedium,
+              ),
+              AppGap.h16,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: () =>
+                      context.pushNamed(AppRoutes.mySubscriptionName),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Ver mi suscripción'),
+                ),
+              ),
+              AppGap.h24,
               const Divider(),
               AppGap.h16,
               Text('Seguridad', style: AppTypography.headline),

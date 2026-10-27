@@ -45,6 +45,7 @@ class AuthUser {
     required this.firstName,
     required this.lastName,
     required this.roles,
+    required this.type,
     this.schoolId,
   });
 
@@ -53,9 +54,17 @@ class AuthUser {
   final String firstName;
   final String lastName;
   final List<String> roles;
+
+  /// "Particular" o "Institutional".
+  /// Determina si el usuario accede por pago individual o por institución.
+  final String type;
+
   final String? schoolId;
 
   String get fullName => '$firstName $lastName'.trim();
+
+  bool get isParticular => type == 'Particular';
+  bool get isInstitutional => type == 'Institutional';
 
   bool hasRole(String role) {
     final normalized = role.toLowerCase();
@@ -71,6 +80,7 @@ class AuthUser {
       roles: (json['roles'] as List<dynamic>? ?? const [])
           .map((r) => r.toString())
           .toList(growable: false),
+      type: json['type']?.toString() ?? 'Particular',
       schoolId: json['schoolId']?.toString(),
     );
   }

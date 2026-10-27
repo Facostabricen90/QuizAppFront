@@ -32,6 +32,20 @@ class SchoolDraft {
   final String? city;
 }
 
+class InvitationCodeDraft {
+  const InvitationCodeDraft({
+    required this.institutionId,
+    this.code,
+    required this.maxUses,
+    this.expiresAtUtc,
+  });
+
+  final String institutionId;
+  final String? code;
+  final int maxUses;
+  final DateTime? expiresAtUtc;
+}
+
 Future<StaffDraft?> showStaffDialog(BuildContext context) {
   return showDialog<StaffDraft>(
     context: context,
@@ -68,6 +82,16 @@ Future<QuestionDraft?> showQuestionDialog(
     context: context,
     builder: (context) =>
         _QuestionDialog(subjects: subjects, question: question),
+  );
+}
+
+Future<InvitationCodeDraft?> showInvitationCodeDialog(
+  BuildContext context, {
+  required List<SchoolModel> schools,
+}) {
+  return showDialog<InvitationCodeDraft>(
+    context: context,
+    builder: (context) => _InvitationCodeDialog(schools: schools),
   );
 }
 
@@ -686,6 +710,192 @@ class _QuestionDialogState extends State<_QuestionDialog> {
         ),
       ),
     );
+  }
+}
+
+class _InvitationCodeDialog extends StatefulWidget {
+  const _InvitationCodeDialog({required this.schools});
+
+  final List<SchoolModel> schools;
+
+  @override
+  State<_InvitationCodeDialog> createState() => _InvitationCodeDialogState();
+}
+
+class _InvitationCodeDialogState extends State<_InvitationCodeDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _codeController = TextEditingController();
+  final _maxUsesController = TextEditingController(text: '100');
+  late String _institutionId;
+  bool _isUnlimited = false;
+  DateTime? _expiresAt;
+  bool _hasExpiration = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _institutionId = widget.schools.first.id;
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _maxUsesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _expiresAt ?? now.add(const Duration(days: 90)),
+      firstDate: now.add(const Duration(days: 1)),
+      lastDate: now.add(const Duration(days: 365 * 3)),
+      helpText: 'Selecciona la fecha de expiración',
+    );
+
+    if (picked != null) {
+      setState(() {
+        _expiresAt = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
+        _hasExpiration = true;
+      });
+    }
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final maxUses = _isUnlimited
+        ? -1
+        : int.tryParse(_maxUsesController.text.trim()) ?? 0;
+
+    Navigator.of(context).pop(
+      InvitationCodeDraft(
+        institutionId: _institutionId,
+        code: _codeController.text.trim().isEmpty
+            ? null
+            : _codeController.text.trim(),
+        maxUses: maxUses,
+        expiresAtUtc: _hasExpiration ? _expiresAt : null,
+      ),
+    );
+  }
+
+  String? _validateMaxUses(String? value) {
+    if (_isUnlimited) return null;
+    final parsed = int.tryParse(value?.trim() ?? '');
+    if (parsed == null || parsed < 1) {
+      return 'Ingresa un número mayor a 0.';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _DialogFrame(
+      title: 'Nuevo código de invitación',
+      subtitle:
+          'Genera un código para que los estudiantes de una institución se registren sin costo.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _institutionId,
+              decoration: const InputDecoration(
+                labelText: 'Institución',
+                prefixIcon: Icon(Icons.apartment_outlined),
+              ),
+              items: widget.schools
+                  .map(
+                    (school) => DropdownMenuItem(
+                      value: school.id,
+                      child: Text(school.name, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _institutionId = value);
+                }
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _codeController,
+              decoration: const InputDecoration(
+                labelText: 'Código (opcional)',
+                prefixIcon: Icon(Icons.vpn_key_outlined),
+                helperText: 'Déjalo vacío para generarlo automáticamente.',
+              ),
+              textCapitalization: TextCapitalization.characters,
+              maxLength: 50,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _maxUsesController,
+                    enabled: !_isUnlimited,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Máximo de usos',
+                      prefixIcon: Icon(Icons.people_outline),
+                    ),
+                    validator: _validateMaxUses,
+                  ),
+                ),
+              ],
+            ),
+            CheckboxListTile(
+              value: _isUnlimited,
+              onChanged: (value) =>
+                  setState(() => _isUnlimited = value ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Sin límite de usos'),
+            ),
+            const Divider(),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_outlined),
+              title: Text(
+                _hasExpiration && _expiresAt != null
+                    ? 'Expira el ${_formatDate(_expiresAt!)}'
+                    : 'Sin fecha de expiración',
+              ),
+              subtitle: const Text('Selecciona una fecha si quieres que caduque.'),
+              trailing: _hasExpiration
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Quitar expiración',
+                      onPressed: () => setState(() {
+                        _hasExpiration = false;
+                        _expiresAt = null;
+                      }),
+                    )
+                  : null,
+              onTap: _pickDate,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _DialogActions(
+              submitLabel: 'Crear código',
+              onSubmit: _submit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    return '$d/$m/${date.year}';
   }
 }
 

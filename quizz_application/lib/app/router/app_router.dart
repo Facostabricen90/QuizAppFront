@@ -12,6 +12,8 @@ import '../../features/authentication/presentation/pages/register_page.dart';
 import '../../features/authentication/presentation/pages/reset_password_page.dart';
 import '../../features/authentication/presentation/pages/welcome_page.dart';
 import '../../features/student/presentation/pages/student_dashboard_page.dart';
+import '../../features/subscriptions/presentation/pages/plans_page.dart';
+import '../../features/subscriptions/presentation/pages/subscription_page.dart';
 import 'app_routes.dart';
 
 class AppRouter {
@@ -88,6 +90,33 @@ class AppRouter {
               apiClient: apiClient,
             ),
           ),
+          // NUEVAS RUTAS
+          GoRoute(
+            path: AppRoutes.plans,
+            name: AppRoutes.plansName,
+            builder: (context, state) {
+              final client = apiClient;
+              if (client == null) {
+                return const Scaffold(
+                  body: Center(child: Text('API no configurada.')),
+                );
+              }
+              return PlansPage(apiClient: client);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.mySubscription,
+            name: AppRoutes.mySubscriptionName,
+            builder: (context, state) {
+              final client = apiClient;
+              if (client == null) {
+                return const Scaffold(
+                  body: Center(child: Text('API no configurada.')),
+                );
+              }
+              return SubscriptionPage(apiClient: client);
+            },
+          ),
         ],
         redirect: (context, state) {
           final location = state.matchedLocation;
@@ -102,15 +131,21 @@ class AppRouter {
               location == AppRoutes.forgotPassword ||
               location == AppRoutes.resetPassword ||
               location == AppRoutes.confirmEmail;
-          // change-password requiere sesión activa: NO va aquí.
+          // /plans es público (permite ver precios sin login)
+          final isPublicSubscriptionRoute = location == AppRoutes.plans;
+          // /subscription requiere sesión
+          final isProtectedSubscriptionRoute =
+              location == AppRoutes.mySubscription;
+
           final isProtectedRoute =
               isWelcome ||
               isStudentDashboard ||
               isAdminDashboard ||
-              location == AppRoutes.changePassword;
+              location == AppRoutes.changePassword ||
+              isProtectedSubscriptionRoute;
 
           if (status == AuthStatus.initializing) {
-            if (isEntryRoute || isRecoveryRoute) {
+            if (isEntryRoute || isRecoveryRoute || isPublicSubscriptionRoute) {
               return null;
             }
             return isSplash ? null : AppRoutes.splash;
@@ -138,7 +173,7 @@ class AppRouter {
             return null;
           }
 
-          // No autenticado: rutas protegidas → login. Recovery y entry → permitir.
+          // No autenticado
           return isSplash || isProtectedRoute ? AppRoutes.login : null;
         },
       );

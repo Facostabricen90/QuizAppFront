@@ -10,6 +10,10 @@ abstract final class AppRoutes {
   static const studentDashboard = '/student';
   static const adminDashboard = '/admin';
 
+  // Nuevas rutas de suscripciones
+  static const plans = '/plans';
+  static const mySubscription = '/subscription';
+
   static const splashName = 'splash';
   static const loginName = 'login';
   static const registerName = 'register';
@@ -20,4 +24,7 @@ abstract final class AppRoutes {
   static const welcomeName = 'welcome';
   static const studentDashboardName = 'student-dashboard';
   static const adminDashboardName = 'admin-dashboard';
+
+  static const plansName = 'plans';
+  static const mySubscriptionName = 'my-subscription';
 }

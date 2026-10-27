@@ -50,11 +50,12 @@ class AuthController extends ChangeNotifier {
     });
   }
 
-  Future<bool> register({
+    Future<bool> register({
     required String email,
     required String password,
     required String firstName,
     required String lastName,
+    String? invitationCode,
   }) async {
     status = AuthStatus.authenticating;
     errorMessage = null;
@@ -67,6 +68,7 @@ class AuthController extends ChangeNotifier {
         password: password,
         firstName: firstName,
         lastName: lastName,
+        invitationCode: invitationCode,
       );
 
       currentUser = null;

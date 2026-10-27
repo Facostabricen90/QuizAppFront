@@ -21,6 +21,7 @@ enum _AdminSection {
   subjects('Materias', Icons.category_outlined),
   staff('Profesores', Icons.badge_outlined, adminOnly: true),
   schools('Instituciones', Icons.apartment_outlined, adminOnly: true),
+  invitationCodes('Códigos', Icons.vpn_key_outlined, adminOnly: true),
   account('Mi cuenta', Icons.manage_accounts_outlined);
 
   const _AdminSection(this.label, this.icon, {this.adminOnly = false});
@@ -50,6 +51,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   List<SubjectModel> _subjects = const [];
   List<QuestionModel> _questions = const [];
   List<SchoolModel> _schools = const [];
+  List<InvitationCodeModel> _invitationCodes = const [];
   bool _loading = false;
   bool _mutating = false;
   String? _errorMessage;
@@ -86,9 +88,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       final schoolsFuture = _isAdmin
           ? repository.getSchools()
           : Future<List<SchoolModel>>.value(const []);
+      final codesFuture = _isAdmin
+          ? repository.getInvitationCodes()
+          : Future<List<InvitationCodeModel>>.value(const []);
+
       final subjects = await subjectsFuture;
       final questions = await questionsFuture;
       final schools = await schoolsFuture;
+      final codes = await codesFuture;
       if (!mounted) {
         return;
       }
@@ -96,6 +103,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         _subjects = subjects;
         _questions = questions;
         _schools = schools;
+        _invitationCodes = codes;
         _loading = false;
         _errorMessage = null;
       });
@@ -335,6 +343,83 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
+  Future<void> _openInvitationCode() async {
+    final repository = _repository;
+    if (repository == null) {
+      return;
+    }
+    if (_schools.isEmpty) {
+      _showMessage(
+        'Primero debes crear al menos una institución.',
+        error: true,
+      );
+      setState(() => _section = _AdminSection.schools);
+      return;
+    }
+    final draft = await showInvitationCodeDialog(context, schools: _schools);
+    if (draft == null || !mounted) {
+      return;
+    }
+    await _runMutation(() async {
+      await repository.createInvitationCode(
+        institutionId: draft.institutionId,
+        code: draft.code,
+        maxUses: draft.maxUses,
+        expiresAtUtc: draft.expiresAtUtc,
+      );
+    }, 'Código creado.');
+  }
+
+  Future<void> _revokeInvitationCode(InvitationCodeModel code) async {
+    final repository = _repository;
+    if (repository == null) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Revocar código'),
+            content: Text(
+              'El código “${code.code}” dejará de ser válido para nuevos registros. Los estudiantes que ya lo usaron no se verán afectados.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Revocar'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirmed) {
+      return;
+    }
+    await _runMutation(
+      () => repository.revokeInvitationCode(code.id),
+      'Código revocado.',
+    );
+  }
+
+  Future<void> _deleteInvitationCode(InvitationCodeModel code) async {
+    final repository = _repository;
+    if (repository == null ||
+        !await _confirmDelete(
+          'Eliminar código',
+          'Esta acción eliminará permanentemente el código “${code.code}”.',
+        )) {
+      return;
+    }
+    await _runMutation(
+      () => repository.deleteInvitationCode(code.id),
+      'Código eliminado.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.authController.currentUser!;
@@ -377,6 +462,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         questions: _questions,
                         subjects: _subjects,
                         schools: _schools,
+                        invitationCodes: _invitationCodes,
                         onSelect: (section) =>
                             setState(() => _section = section),
                         onRefresh: _loadData,
@@ -390,6 +476,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         onCreateSchool: _openSchool,
                         onEditSchool: _openSchool,
                         onDeleteSchool: _deleteSchool,
+                        onCreateInvitationCode: _openInvitationCode,
+                        onRevokeInvitationCode: _revokeInvitationCode,
+                        onDeleteInvitationCode: _deleteInvitationCode,
                         onLogout: widget.authController.logout,
                       ),
                     ),
@@ -609,6 +698,7 @@ class _MainArea extends StatelessWidget {
     required this.questions,
     required this.subjects,
     required this.schools,
+    required this.invitationCodes,
     required this.onSelect,
     required this.onRefresh,
     required this.onCreateQuestion,
@@ -621,6 +711,9 @@ class _MainArea extends StatelessWidget {
     required this.onCreateSchool,
     required this.onEditSchool,
     required this.onDeleteSchool,
+    required this.onCreateInvitationCode,
+    required this.onRevokeInvitationCode,
+    required this.onDeleteInvitationCode,
     required this.onLogout,
   });
 
@@ -635,6 +728,7 @@ class _MainArea extends StatelessWidget {
   final List<QuestionModel> questions;
   final List<SubjectModel> subjects;
   final List<SchoolModel> schools;
+  final List<InvitationCodeModel> invitationCodes;
   final ValueChanged<_AdminSection> onSelect;
   final Future<void> Function({bool showProgress}) onRefresh;
   final VoidCallback onCreateQuestion;
@@ -647,6 +741,9 @@ class _MainArea extends StatelessWidget {
   final VoidCallback onCreateSchool;
   final ValueChanged<SchoolModel> onEditSchool;
   final ValueChanged<SchoolModel> onDeleteSchool;
+  final VoidCallback onCreateInvitationCode;
+  final ValueChanged<InvitationCodeModel> onRevokeInvitationCode;
+  final ValueChanged<InvitationCodeModel> onDeleteInvitationCode;
   final VoidCallback onLogout;
 
   @override
@@ -742,6 +839,12 @@ class _MainArea extends StatelessWidget {
         onCreate: onCreateSchool,
         onEdit: onEditSchool,
         onDelete: onDeleteSchool,
+      ),
+      _AdminSection.invitationCodes => _InvitationCodesPanel(
+        codes: invitationCodes,
+        onCreate: onCreateInvitationCode,
+        onRevoke: onRevokeInvitationCode,
+        onDelete: onDeleteInvitationCode,
       ),
       _AdminSection.account => _AccountPanel(
         email: userEmail,
@@ -1626,6 +1729,185 @@ class _SchoolsPanel extends StatelessWidget {
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _InvitationCodesPanel extends StatelessWidget {
+  const _InvitationCodesPanel({
+    required this.codes,
+    required this.onCreate,
+    required this.onRevoke,
+    required this.onDelete,
+  });
+
+  final List<InvitationCodeModel> codes;
+  final VoidCallback onCreate;
+  final ValueChanged<InvitationCodeModel> onRevoke;
+  final ValueChanged<InvitationCodeModel> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionHeader(
+          title: 'Códigos de invitación',
+          subtitle:
+              '${codes.length} ${codes.length == 1 ? "código" : "códigos"} generados',
+          actionLabel: 'Nuevo código',
+          actionIcon: Icons.add_rounded,
+          onAction: onCreate,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _Surface(
+          child: codes.isEmpty
+              ? const _EmptyState(
+                  icon: Icons.vpn_key_outlined,
+                  title: 'Aún no hay códigos',
+                  detail:
+                      'Genera un código para invitar a estudiantes de una institución.',
+                )
+              : Column(
+                  children: [
+                    for (var index = 0; index < codes.length; index++) ...[
+                      _InvitationCodeTile(
+                        code: codes[index],
+                        onRevoke: () => onRevoke(codes[index]),
+                        onDelete: () => onDelete(codes[index]),
+                      ),
+                      if (index != codes.length - 1) const Divider(height: 1),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InvitationCodeTile extends StatelessWidget {
+  const _InvitationCodeTile({
+    required this.code,
+    required this.onRevoke,
+    required this.onDelete,
+  });
+
+  final InvitationCodeModel code;
+  final VoidCallback onRevoke;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = !code.isActive
+        ? AppColors.adminMuted
+        : code.isUsable
+        ? AppColors.success
+        : AppColors.warning;
+
+    final statusLabel = !code.isActive
+        ? 'Revocado'
+        : code.isUsable
+        ? 'Activo'
+        : 'No usable';
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      leading: CircleAvatar(
+        backgroundColor: statusColor.withValues(alpha: .12),
+        foregroundColor: statusColor,
+        child: Icon(
+          code.isActive ? Icons.vpn_key_outlined : Icons.lock_outline,
+          size: 19,
+        ),
+      ),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              code.code,
+              style: AppTypography.label.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+                letterSpacing: .5,
+              ),
+            ),
+          ),
+          _StatusChip(label: statusLabel, color: statusColor),
+        ],
+      ),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(code.institutionName),
+            const SizedBox(height: 2),
+            Text(
+              _subtitleFor(code),
+              style: AppTypography.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (value) {
+          if (value == 'revoke') {
+            onRevoke();
+          } else if (value == 'delete') {
+            onDelete();
+          }
+        },
+        itemBuilder: (context) => [
+          if (code.isActive)
+            const PopupMenuItem(
+              value: 'revoke',
+              child: Text('Revocar'),
+            ),
+          const PopupMenuItem(
+            value: 'delete',
+            child: Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _subtitleFor(InvitationCodeModel code) {
+    final parts = <String>[code.usesLabel];
+    if (code.expiresAtUtc != null) {
+      final date = code.expiresAtUtc!.toLocal();
+      final formatted =
+          '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      parts.add('expira $formatted');
+    } else {
+      parts.add('sin expiración');
+    }
+    return parts.join(' · ');
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.bodySmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 }

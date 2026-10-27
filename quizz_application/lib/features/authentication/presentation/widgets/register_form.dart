@@ -27,11 +27,13 @@ class _RegisterFormState extends State<RegisterForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _invitationCodeController = TextEditingController();
 
   bool _acceptTerms = false;
   bool _showTermsError = false;
   bool _isLoading = false;
   bool _registrationPending = false;
+  bool _showInvitationCodeField = false;
   String? _errorMessage;
 
   @override
@@ -41,6 +43,7 @@ class _RegisterFormState extends State<RegisterForm> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _invitationCodeController.dispose();
     super.dispose();
   }
 
@@ -61,11 +64,14 @@ class _RegisterFormState extends State<RegisterForm> {
       _errorMessage = null;
     });
 
+    final invitationCode = _invitationCodeController.text.trim();
+
     final success = await widget.authController.register(
       email: _emailController.text.trim(),
       password: _passwordController.text,
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
+      invitationCode: invitationCode.isEmpty ? null : invitationCode,
     );
 
     if (!mounted) {
@@ -100,7 +106,6 @@ class _RegisterFormState extends State<RegisterForm> {
     if (value == null || value.trim().isEmpty) {
       return 'Ingresa $fieldName.';
     }
-
     return null;
   }
 
@@ -113,7 +118,6 @@ class _RegisterFormState extends State<RegisterForm> {
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       return 'Ingresa un correo electrónico válido.';
     }
-
     return null;
   }
 
@@ -121,11 +125,9 @@ class _RegisterFormState extends State<RegisterForm> {
     if (value == null || value.isEmpty) {
       return 'Ingresa una contraseña.';
     }
-
     if (value.length < 8) {
       return 'Utiliza al menos 8 caracteres.';
     }
-
     return null;
   }
 
@@ -133,11 +135,9 @@ class _RegisterFormState extends State<RegisterForm> {
     if (value == null || value.isEmpty) {
       return 'Confirma tu contraseña.';
     }
-
     if (value != _passwordController.text) {
       return 'Las contraseñas no coinciden.';
     }
-
     return null;
   }
 
@@ -227,6 +227,35 @@ class _RegisterFormState extends State<RegisterForm> {
             ),
 
             AppGap.h16,
+
+            // ─────────────────────────────────────────────────────
+            // Código de institución (opcional)
+            // ─────────────────────────────────────────────────────
+            if (!_showInvitationCodeField)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _isLoading
+                      ? null
+                      : () => setState(() => _showInvitationCodeField = true),
+                  icon: const Icon(Icons.school_outlined, size: 18),
+                  label: const Text('Tengo un código de institución'),
+                ),
+              )
+            else ...[
+              AppTextField(
+                label: 'Código de institución (opcional)',
+                controller: _invitationCodeController,
+                prefixIcon: Icons.school_outlined,
+                textInputAction: TextInputAction.next,
+              ),
+              AppGap.h4,
+              Text(
+                'Si tu colegio te dio un código, ingrésalo aquí para vincularte sin costo.',
+                style: AppTypography.bodySmall,
+              ),
+              AppGap.h16,
+            ],
 
             CheckboxListTile(
               value: _acceptTerms,
