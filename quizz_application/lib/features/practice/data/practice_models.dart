@@ -1,13 +1,19 @@
 class PracticeQuestionOptionModel {
-  const PracticeQuestionOptionModel({required this.id, required this.text});
+  const PracticeQuestionOptionModel({
+    required this.id, 
+    required this.text,
+    this.imageUrl,
+  });
 
   final String id;
   final String text;
+  final String? imageUrl;
 
   factory PracticeQuestionOptionModel.fromJson(Map<String, dynamic> json) {
     return PracticeQuestionOptionModel(
       id: json['id']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString(),
     );
   }
 }
@@ -19,10 +25,12 @@ class PracticeQuestionModel {
     required this.options,
     required this.answered,
     this.selectedOptionId,
+    this.imageUrl, // <--- AGREGADO AQUÍ
   });
 
   final String id;
   final String text;
+  final String? imageUrl; // <--- AGREGADO AQUÍ
   final List<PracticeQuestionOptionModel> options;
   final bool answered;
   final String? selectedOptionId;
@@ -32,6 +40,7 @@ class PracticeQuestionModel {
     return PracticeQuestionModel(
       id: json['questionId']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString(), // <--- AGREGADO AQUÍ
       options: rawOptions is List
           ? rawOptions
                 .whereType<Map>()

@@ -45,12 +45,8 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
   }
 
   String _messageFor(Object error) {
-    if (error is ApiException) {
-      return error.message;
-    }
-    if (error is FormatException) {
-      return error.message;
-    }
+    if (error is ApiException) return error.message;
+    if (error is FormatException) return error.message;
     return 'No se pudo completar la práctica.';
   }
 
@@ -64,18 +60,14 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
         subjectId: widget.subject.id,
         questionCount: widget.questionCount,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _session = session;
         _loading = false;
         _currentIndex = 0;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _errorMessage = _messageFor(error);
@@ -86,9 +78,8 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
   Future<void> _submitAnswer() async {
     final session = _session;
     final optionId = _selectedOptionId;
-    if (session == null || optionId == null || _submitting) {
-      return;
-    }
+    if (session == null || optionId == null || _submitting) return;
+
     final question = session.questions[_currentIndex];
     setState(() => _submitting = true);
     try {
@@ -97,17 +88,13 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
         questionId: question.id,
         selectedOptionId: optionId,
       );
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _answerResult = result;
         _submitting = false;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() => _submitting = false);
       _showError(_messageFor(error));
     }
@@ -115,9 +102,8 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
 
   Future<void> _continue() async {
     final session = _session;
-    if (session == null || _answerResult == null || _submitting) {
-      return;
-    }
+    if (session == null || _answerResult == null || _submitting) return;
+
     if (_currentIndex < session.questions.length - 1) {
       setState(() {
         _currentIndex++;
@@ -130,17 +116,13 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
     setState(() => _submitting = true);
     try {
       final result = await _repository.finishSession(session.id);
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         _result = result;
         _submitting = false;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() => _submitting = false);
       _showError(_messageFor(error));
     }
@@ -168,9 +150,7 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
   }
 
   Widget _buildBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
     if (_errorMessage != null) {
       return _PracticeError(message: _errorMessage!, onRetry: _start);
     }
@@ -189,6 +169,7 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
       );
     }
     final question = session.questions[_currentIndex];
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Center(
@@ -219,29 +200,47 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Text(question.text, style: AppTypography.headline),
-                    const SizedBox(height: AppSpacing.lg),
-                    for (
-                      var index = 0;
-                      index < question.options.length;
-                      index++
-                    ) ...[
-                      _OptionTile(
-                        letter: String.fromCharCode(65 + index),
-                        option: question.options[index],
-                        selected:
-                            _selectedOptionId == question.options[index].id,
-                        answerResult: _answerResult,
-                        onTap: _answerResult == null
-                            ? () => setState(
-                                () => _selectedOptionId =
-                                    question.options[index].id,
-                              )
-                            : null,
+                    
+                    Text(
+                      question.text,
+                      style: AppTypography.headline.copyWith(
+                        height: 1.6,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 16,
                       ),
-                      if (index != question.options.length - 1)
-                        const SizedBox(height: AppSpacing.sm),
+                      textAlign: TextAlign.justify,
+                    ),
+
+                    if (question.imageUrl != null && question.imageUrl!.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Center(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            'https://localhost:7126${question.imageUrl}',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Text('No se pudo cargar la imagen de la tabla', style: TextStyle(color: Colors.red));
+                            },
+                          ),
+                        ),
+                      ),
                     ],
+                    
+                    const SizedBox(height: AppSpacing.lg),
+                    
+                    // AQUÍ LLAMAMOS AL NUEVO WIDGET DE OPCIONES DINÁMICO
+                    _OptionsSection(
+                      options: question.options,
+                      selectedOptionId: _selectedOptionId,
+                      answerResult: _answerResult,
+                      onSelect: (id) {
+                        if (_answerResult == null) {
+                          setState(() => _selectedOptionId = id);
+                        }
+                      },
+                    ),
+                    
                     if (_answerResult != null) ...[
                       const SizedBox(height: AppSpacing.lg),
                       _FeedbackCard(result: _answerResult!),
@@ -267,8 +266,7 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
                           : Icon(
                               _answerResult == null
                                   ? Icons.check_rounded
-                                  : _currentIndex ==
-                                        session.questions.length - 1
+                                  : _currentIndex == session.questions.length - 1
                                   ? Icons.flag_outlined
                                   : Icons.arrow_forward_rounded,
                             ),
@@ -287,6 +285,78 @@ class _PracticeSessionPageState extends State<PracticeSessionPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// NUEVO WIDGET: Decide si mostrar en lista o en cuadrícula
+// ─────────────────────────────────────────────────────────────
+class _OptionsSection extends StatelessWidget {
+  const _OptionsSection({
+    required this.options,
+    required this.selectedOptionId,
+    required this.answerResult,
+    required this.onSelect,
+  });
+
+  final List<PracticeQuestionOptionModel> options;
+  final String? selectedOptionId;
+  final AnswerResultModel? answerResult;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    // Determinamos si las opciones son principalmente imágenes
+    final hasImageOptions = options.any((o) => o.imageUrl != null && o.imageUrl!.isNotEmpty);
+    final hasTextOptions = options.any((o) => o.text.isNotEmpty);
+
+    // Si tienen imágenes y no tienen texto (como la Pregunta 12), usamos cuadrícula
+    if (hasImageOptions && !hasTextOptions) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Si la pantalla es ancha (PC), ponemos 2 columnas. Si es celular, 1 columna.
+          final isWide = constraints.maxWidth > 600;
+          final itemWidth = isWide ? (constraints.maxWidth - AppSpacing.md) / 2 : constraints.maxWidth;
+
+          return Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.md,
+            children: options.asMap().entries.map((entry) {
+              final index = entry.key;
+              final option = entry.value;
+              return SizedBox(
+                width: itemWidth,
+                child: _OptionTile(
+                  letter: String.fromCharCode(65 + index),
+                  option: option,
+                  selected: selectedOptionId == option.id,
+                  answerResult: answerResult,
+                  onTap: () => onSelect(option.id),
+                ),
+              );
+            }).toList(),
+          );
+        },
+      );
+    }
+
+    // Si son solo texto, mostramos la lista vertical clásica
+    return Column(
+      children: options.asMap().entries.map((entry) {
+        final index = entry.key;
+        final option = entry.value;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: _OptionTile(
+            letter: String.fromCharCode(65 + index),
+            option: option,
+            selected: selectedOptionId == option.id,
+            answerResult: answerResult,
+            onTap: () => onSelect(option.id),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -332,13 +402,12 @@ class _OptionTile extends StatelessWidget {
   final PracticeQuestionOptionModel option;
   final bool selected;
   final AnswerResultModel? answerResult;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final isCorrect = answerResult?.correctOptionId == option.id;
-    final isWrongSelection =
-        answerResult != null && selected && !answerResult!.isCorrect;
+    final isWrongSelection = answerResult != null && selected && !answerResult!.isCorrect;
     final color = isCorrect
         ? AppColors.success
         : isWrongSelection
@@ -350,11 +419,13 @@ class _OptionTile extends StatelessWidget {
         ? color.withValues(alpha: .08)
         : AppColors.surface;
 
+    final hasImage = option.imageUrl != null && option.imageUrl!.isNotEmpty;
+
     return Material(
       color: background,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: InkWell(
-        onTap: onTap,
+        onTap: answerResult == null ? onTap : null,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -365,24 +436,51 @@ class _OptionTile extends StatelessWidget {
               width: selected || isCorrect ? 2 : 1,
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: color.withValues(alpha: .12),
-                foregroundColor: color == AppColors.border
-                    ? AppColors.textSecondary
-                    : color,
-                child: Text(letter),
+              // Letra de la opción (A, B, C, D)
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: color.withValues(alpha: .12),
+                    foregroundColor: color == AppColors.border
+                        ? AppColors.textSecondary
+                        : color,
+                    child: Text(letter),
+                  ),
+                  if (option.text.isNotEmpty) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        option.text,
+                        style: AppTypography.bodyLarge,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(option.text, style: AppTypography.bodyLarge),
-              ),
-              if (isCorrect)
-                const Icon(Icons.check_circle_rounded, color: AppColors.success)
-              else if (isWrongSelection)
-                const Icon(Icons.cancel_rounded, color: AppColors.error),
+              
+              // Imagen si existe
+              if (hasImage) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      'https://localhost:7126${option.imageUrl}',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          'No se pudo cargar la imagen',
+                          style: TextStyle(color: Colors.red, fontSize: 12),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -541,7 +639,7 @@ class _ReviewCard extends StatelessWidget {
     );
     for (final option in question.options) {
       if (option.id == id) {
-        return option.text;
+        return option.text.isNotEmpty ? option.text : 'Imagen seleccionada';
       }
     }
     return 'Sin respuesta';
