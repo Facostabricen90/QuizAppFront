@@ -21,7 +21,7 @@ enum _AdminSection {
   questions('Preguntas', Icons.quiz_outlined),
   subjects('Materias', Icons.category_outlined),
   staff('Profesores', Icons.badge_outlined, adminOnly: true),
-  schools('Instituciones', Icons.apartment_outlined, adminOnly: true),
+  institutions('Instituciones', Icons.apartment_outlined, adminOnly: true),
   invitationCodes('Códigos', Icons.vpn_key_outlined, adminOnly: true),
   account('Mi cuenta', Icons.manage_accounts_outlined);
 
@@ -51,7 +51,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   _AdminSection _section = _AdminSection.overview;
   List<SubjectModel> _subjects = const [];
   List<QuestionModel> _questions = const [];
-  List<SchoolModel> _schools = const [];
+  List<InstitutionModel> _institutions = const [];
   List<InvitationCodeModel> _invitationCodes = const [];
   ReportResponseModel? _studentReports;
   bool _loading = false;
@@ -85,9 +85,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     try {
       final subjectsFuture = repository.getSubjects();
       final questionsFuture = repository.getQuestions();
-      final schoolsFuture = _isAdmin
-          ? repository.getSchools()
-          : Future<List<SchoolModel>>.value(const []);
+      final institutionsFuture = _isAdmin
+          ? repository.getInstitutions()
+          : Future<List<InstitutionModel>>.value(const []);
       final codesFuture = _isAdmin
           ? repository.getInvitationCodes()
           : Future<List<InvitationCodeModel>>.value(const []);
@@ -95,7 +95,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
       final subjects = await subjectsFuture;
       final questions = await questionsFuture;
-      final schools = await schoolsFuture;
+      final institutions = await institutionsFuture;
       final codes = await codesFuture;
       final reports = await reportsFuture;
 
@@ -103,7 +103,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       setState(() {
         _subjects = subjects;
         _questions = questions;
-        _schools = schools;
+        _institutions = institutions;
         _invitationCodes = codes;
         _studentReports = reports;
         _loading = false;
@@ -187,8 +187,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       [...subjects]..sort((first, second) => first.name.compareTo(second.name));
 
   /// Same order the API uses for institutions (by name).
-  static List<SchoolModel> _sortedSchools(List<SchoolModel> schools) =>
-      [...schools]..sort((first, second) => first.name.compareTo(second.name));
+  static List<InstitutionModel> _sortedInstitutions(List<InstitutionModel> institutions) =>
+      [...institutions]..sort((first, second) => first.name.compareTo(second.name));
 
   Future<bool> _confirmDelete(String title, String detail) async {
     return await showDialog<bool>(
@@ -284,39 +284,39 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     }, 'Materia eliminada.');
   }
 
-  Future<void> _openSchool([SchoolModel? school]) async {
+  Future<void> _openInstitution([InstitutionModel? institution]) async {
     final repository = _repository;
     if (repository == null) return;
-    final draft = await showSchoolDialog(context, school: school);
+    final draft = await showInstitutionDialog(context, institution: institution);
     if (draft == null || !mounted) return;
     await _runMutation(() async {
-      if (school == null) {
-        final createdSchool = await repository.createSchool(name: draft.name, city: draft.city);
-        _updateIfMounted(() => _schools = _sortedSchools([..._schools, createdSchool]));
+      if (institution == null) {
+        final createdInstitution = await repository.createInstitution(name: draft.name, city: draft.city);
+        _updateIfMounted(() => _institutions = _sortedInstitutions([..._institutions, createdInstitution]));
       } else {
-        final updatedSchool = await repository.updateSchool(school.id, name: draft.name, city: draft.city);
+        final updatedInstitution = await repository.updateInstitution(institution.id, name: draft.name, city: draft.city);
         _updateIfMounted(
-          () => _schools = _sortedSchools(_replaceById(_schools, updatedSchool, (item) => item.id)),
+          () => _institutions = _sortedInstitutions(_replaceById(_institutions, updatedInstitution, (item) => item.id)),
         );
         // Invitation codes show the institution name, so they are the only list that depends on this change.
-        if (updatedSchool.name != school.name) {
+        if (updatedInstitution.name != institution.name) {
           final refreshedCodes = await repository.getInvitationCodes();
           _updateIfMounted(() => _invitationCodes = refreshedCodes);
         }
       }
-    }, school == null ? 'Institución creada.' : 'Institución actualizada.');
+    }, institution == null ? 'Institución creada.' : 'Institución actualizada.');
   }
 
-  Future<void> _deleteSchool(SchoolModel school) async {
+  Future<void> _deleteInstitution(InstitutionModel institution) async {
     final repository = _repository;
-    if (repository == null || !await _confirmDelete('Eliminar institución', 'Esta acción eliminará “${school.name}”.')) return;
+    if (repository == null || !await _confirmDelete('Eliminar institución', 'Esta acción eliminará “${institution.name}”.')) return;
     await _runMutation(() async {
-      await repository.deleteSchool(school.id);
+      await repository.deleteInstitution(institution.id);
       _updateIfMounted(() {
-        _schools = _removeById(_schools, school.id, (item) => item.id);
+        _institutions = _removeById(_institutions, institution.id, (item) => item.id);
         // The API deletes the institution's invitation codes together with it.
         _invitationCodes = _invitationCodes
-            .where((code) => code.institutionId != school.id)
+            .where((code) => code.institutionId != institution.id)
             .toList(growable: false);
       });
     }, 'Institución eliminada.');
@@ -343,12 +343,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Future<void> _openInvitationCode() async {
     final repository = _repository;
     if (repository == null) return;
-    if (_schools.isEmpty) {
+    if (_institutions.isEmpty) {
       _showMessage('Primero debes crear al menos una institución.', error: true);
-      setState(() => _section = _AdminSection.schools);
+      setState(() => _section = _AdminSection.institutions);
       return;
     }
-    final draft = await showInvitationCodeDialog(context, schools: _schools);
+    final draft = await showInvitationCodeDialog(context, institutions: _institutions);
     if (draft == null || !mounted) return;
     await _runMutation(() async {
       final createdCode = await repository.createInvitationCode(institutionId: draft.institutionId, code: draft.code, maxUses: draft.maxUses, expiresAtUtc: draft.expiresAtUtc);
@@ -429,7 +429,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         errorMessage: _errorMessage,
                         questions: _questions,
                         subjects: _subjects,
-                        schools: _schools,
+                        institutions: _institutions,
                         invitationCodes: _invitationCodes,
                         studentReports: _studentReports,
                         onSelect: (section) => setState(() => _section = section),
@@ -441,9 +441,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         onEditSubject: _openSubject,
                         onDeleteSubject: _deleteSubject,
                         onCreateTeacher: _createTeacher,
-                        onCreateSchool: _openSchool,
-                        onEditSchool: _openSchool,
-                        onDeleteSchool: _deleteSchool,
+                        onCreateInstitution: _openInstitution,
+                        onEditInstitution: _openInstitution,
+                        onDeleteInstitution: _deleteInstitution,
                         onCreateInvitationCode: _openInvitationCode,
                         onRevokeInvitationCode: _revokeInvitationCode,
                         onDeleteInvitationCode: _deleteInvitationCode,
@@ -609,7 +609,7 @@ class _MainArea extends StatelessWidget {
     required this.errorMessage,
     required this.questions,
     required this.subjects,
-    required this.schools,
+    required this.institutions,
     required this.invitationCodes,
     required this.studentReports,
     required this.onSelect,
@@ -621,9 +621,9 @@ class _MainArea extends StatelessWidget {
     required this.onEditSubject,
     required this.onDeleteSubject,
     required this.onCreateTeacher,
-    required this.onCreateSchool,
-    required this.onEditSchool,
-    required this.onDeleteSchool,
+    required this.onCreateInstitution,
+    required this.onEditInstitution,
+    required this.onDeleteInstitution,
     required this.onCreateInvitationCode,
     required this.onRevokeInvitationCode,
     required this.onDeleteInvitationCode,
@@ -640,7 +640,7 @@ class _MainArea extends StatelessWidget {
   final String? errorMessage;
   final List<QuestionModel> questions;
   final List<SubjectModel> subjects;
-  final List<SchoolModel> schools;
+  final List<InstitutionModel> institutions;
   final List<InvitationCodeModel> invitationCodes;
   final ReportResponseModel? studentReports;
   final ValueChanged<_AdminSection> onSelect;
@@ -652,9 +652,9 @@ class _MainArea extends StatelessWidget {
   final ValueChanged<SubjectModel> onEditSubject;
   final ValueChanged<SubjectModel> onDeleteSubject;
   final VoidCallback onCreateTeacher;
-  final VoidCallback onCreateSchool;
-  final ValueChanged<SchoolModel> onEditSchool;
-  final ValueChanged<SchoolModel> onDeleteSchool;
+  final VoidCallback onCreateInstitution;
+  final ValueChanged<InstitutionModel> onEditInstitution;
+  final ValueChanged<InstitutionModel> onDeleteInstitution;
   final VoidCallback onCreateInvitationCode;
   final ValueChanged<InvitationCodeModel> onRevokeInvitationCode;
   final ValueChanged<InvitationCodeModel> onDeleteInvitationCode;
@@ -705,7 +705,7 @@ class _MainArea extends StatelessWidget {
   Widget _buildSection() {
     return switch (selected) {
       _AdminSection.overview => _OverviewPanel(
-        isAdmin: isAdmin, questions: questions, subjects: subjects, schools: schools,
+        isAdmin: isAdmin, questions: questions, subjects: subjects, institutions: institutions,
         onCreateQuestion: onCreateQuestion, onCreateTeacher: onCreateTeacher, onOpenQuestions: () => onSelect(_AdminSection.questions),
       ),
       _AdminSection.reports => _ReportsPanel(reportData: studentReports),
@@ -716,8 +716,8 @@ class _MainArea extends StatelessWidget {
         isAdmin: isAdmin, subjects: subjects, onCreate: onCreateSubject, onEdit: onEditSubject, onDelete: onDeleteSubject,
       ),
       _AdminSection.staff => _StaffPanel(onCreate: onCreateTeacher),
-      _AdminSection.schools => _SchoolsPanel(
-        schools: schools, onCreate: onCreateSchool, onEdit: onEditSchool, onDelete: onDeleteSchool,
+      _AdminSection.institutions => _InstitutionsPanel(
+        institutions: institutions, onCreate: onCreateInstitution, onEdit: onEditInstitution, onDelete: onDeleteInstitution,
       ),
       _AdminSection.invitationCodes => _InvitationCodesPanel(
         codes: invitationCodes, onCreate: onCreateInvitationCode, onRevoke: onRevokeInvitationCode, onDelete: onDeleteInvitationCode,
@@ -853,14 +853,14 @@ class _SectionHeader extends StatelessWidget {
 
 class _OverviewPanel extends StatelessWidget {
   const _OverviewPanel({
-    required this.isAdmin, required this.questions, required this.subjects, required this.schools,
+    required this.isAdmin, required this.questions, required this.subjects, required this.institutions,
     required this.onCreateQuestion, required this.onCreateTeacher, required this.onOpenQuestions,
   });
 
   final bool isAdmin;
   final List<QuestionModel> questions;
   final List<SubjectModel> subjects;
-  final List<SchoolModel> schools;
+  final List<InstitutionModel> institutions;
   final VoidCallback onCreateQuestion;
   final VoidCallback onCreateTeacher;
   final VoidCallback onOpenQuestions;
@@ -883,7 +883,7 @@ class _OverviewPanel extends StatelessWidget {
             final metrics = [
               _MetricData(label: 'Preguntas publicadas', value: '${questions.length}', icon: Icons.quiz_outlined, color: AppColors.primary),
               _MetricData(label: 'Materias disponibles', value: '${subjects.length}', icon: Icons.category_outlined, color: AppColors.adminPurple),
-              _MetricData(label: 'Instituciones', value: isAdmin ? '${schools.length}' : '—', icon: Icons.apartment_outlined, color: AppColors.adminOrange),
+              _MetricData(label: 'Instituciones', value: isAdmin ? '${institutions.length}' : '—', icon: Icons.apartment_outlined, color: AppColors.adminOrange),
               const _MetricData(label: 'Estudiantes activos', value: '—', icon: Icons.school_outlined, color: AppColors.adminBlue, note: 'Sin endpoint global'),
             ];
             return Wrap(
@@ -1187,12 +1187,12 @@ class _StaffPanel extends StatelessWidget {
   }
 }
 
-class _SchoolsPanel extends StatelessWidget {
-  const _SchoolsPanel({required this.schools, required this.onCreate, required this.onEdit, required this.onDelete});
-  final List<SchoolModel> schools;
+class _InstitutionsPanel extends StatelessWidget {
+  const _InstitutionsPanel({required this.institutions, required this.onCreate, required this.onEdit, required this.onDelete});
+  final List<InstitutionModel> institutions;
   final VoidCallback onCreate;
-  final ValueChanged<SchoolModel> onEdit;
-  final ValueChanged<SchoolModel> onDelete;
+  final ValueChanged<InstitutionModel> onEdit;
+  final ValueChanged<InstitutionModel> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1202,19 +1202,19 @@ class _SchoolsPanel extends StatelessWidget {
         _SectionHeader(title: 'Instituciones', subtitle: 'Colegios registrados en la plataforma.', actionLabel: 'Nueva institución', actionIcon: Icons.add_business_outlined, onAction: onCreate),
         const SizedBox(height: AppSpacing.lg),
         _Surface(
-          child: schools.isEmpty
+          child: institutions.isEmpty
               ? const _EmptyState(icon: Icons.apartment_outlined, title: 'No hay instituciones', detail: 'Registra el primer colegio de la plataforma.')
               : Column(
                   children: [
-                    for (var index = 0; index < schools.length; index++) ...[
+                    for (var index = 0; index < institutions.length; index++) ...[
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const CircleAvatar(child: Icon(Icons.apartment_outlined, size: 19)),
-                        title: Text(schools[index].name),
-                        subtitle: Text(schools[index].city?.trim().isNotEmpty == true ? schools[index].city! : 'Ciudad sin registrar'),
-                        trailing: PopupMenuButton<String>(onSelected: (value) => value == 'edit' ? onEdit(schools[index]) : onDelete(schools[index]), itemBuilder: (context) => const [PopupMenuItem(value: 'edit', child: Text('Editar')), PopupMenuItem(value: 'delete', child: Text('Eliminar'))]),
+                        title: Text(institutions[index].name),
+                        subtitle: Text(institutions[index].city?.trim().isNotEmpty == true ? institutions[index].city! : 'Ciudad sin registrar'),
+                        trailing: PopupMenuButton<String>(onSelected: (value) => value == 'edit' ? onEdit(institutions[index]) : onDelete(institutions[index]), itemBuilder: (context) => const [PopupMenuItem(value: 'edit', child: Text('Editar')), PopupMenuItem(value: 'delete', child: Text('Eliminar'))]),
                       ),
-                      if (index != schools.length - 1) const Divider(height: 1),
+                      if (index != institutions.length - 1) const Divider(height: 1),
                     ],
                   ],
                 ),

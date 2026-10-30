@@ -349,7 +349,7 @@ AuthUser _testUser({
   String firstName = 'Test',
   String lastName = 'User',
   String type = 'Particular',
-  String? schoolId,
+  String? institutionId,
 }) {
   return AuthUser(
     id: id,
@@ -358,6 +358,6 @@ AuthUser _testUser({
     lastName: lastName,
     roles: roles,
     type: type,
-    schoolId: schoolId,
+    institutionId: institutionId,
   );
 }

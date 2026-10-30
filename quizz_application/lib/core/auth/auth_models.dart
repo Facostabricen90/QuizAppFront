@@ -46,7 +46,7 @@ class AuthUser {
     required this.lastName,
     required this.roles,
     required this.type,
-    this.schoolId,
+    this.institutionId,
   });
 
   final String id;
@@ -55,11 +55,12 @@ class AuthUser {
   final String lastName;
   final List<String> roles;
 
-  /// "Particular" o "Institutional".
-  /// Determina si el usuario accede por pago individual o por institución.
+  /// "Particular" or "Institutional".
+  /// Whether the user pays individually or accesses through their institution.
   final String type;
 
-  final String? schoolId;
+  /// Institution the user belongs to (null for particular users).
+  final String? institutionId;
 
   String get fullName => '$firstName $lastName'.trim();
 
@@ -81,7 +82,7 @@ class AuthUser {
           .map((r) => r.toString())
           .toList(growable: false),
       type: json['type']?.toString() ?? 'Particular',
-      schoolId: json['schoolId']?.toString(),
+      institutionId: json['institutionId']?.toString(),
     );
   }
 }

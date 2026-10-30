@@ -25,8 +25,8 @@ class SubjectDraft {
   final String? description;
 }
 
-class SchoolDraft {
-  const SchoolDraft({required this.name, this.city});
+class InstitutionDraft {
+  const InstitutionDraft({required this.name, this.city});
 
   final String name;
   final String? city;
@@ -63,13 +63,13 @@ Future<SubjectDraft?> showSubjectDialog(
   );
 }
 
-Future<SchoolDraft?> showSchoolDialog(
+Future<InstitutionDraft?> showInstitutionDialog(
   BuildContext context, {
-  SchoolModel? school,
+  InstitutionModel? institution,
 }) {
-  return showDialog<SchoolDraft>(
+  return showDialog<InstitutionDraft>(
     context: context,
-    builder: (context) => _SchoolDialog(school: school),
+    builder: (context) => _InstitutionDialog(institution: institution),
   );
 }
 
@@ -87,11 +87,11 @@ Future<QuestionDraft?> showQuestionDialog(
 
 Future<InvitationCodeDraft?> showInvitationCodeDialog(
   BuildContext context, {
-  required List<SchoolModel> schools,
+  required List<InstitutionModel> institutions,
 }) {
   return showDialog<InvitationCodeDraft>(
     context: context,
-    builder: (context) => _InvitationCodeDialog(schools: schools),
+    builder: (context) => _InvitationCodeDialog(institutions: institutions),
   );
 }
 
@@ -380,16 +380,16 @@ class _SubjectDialogState extends State<_SubjectDialog> {
   }
 }
 
-class _SchoolDialog extends StatefulWidget {
-  const _SchoolDialog({this.school});
+class _InstitutionDialog extends StatefulWidget {
+  const _InstitutionDialog({this.institution});
 
-  final SchoolModel? school;
+  final InstitutionModel? institution;
 
   @override
-  State<_SchoolDialog> createState() => _SchoolDialogState();
+  State<_InstitutionDialog> createState() => _InstitutionDialogState();
 }
 
-class _SchoolDialogState extends State<_SchoolDialog> {
+class _InstitutionDialogState extends State<_InstitutionDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _city;
@@ -397,8 +397,8 @@ class _SchoolDialogState extends State<_SchoolDialog> {
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: widget.school?.name);
-    _city = TextEditingController(text: widget.school?.city);
+    _name = TextEditingController(text: widget.institution?.name);
+    _city = TextEditingController(text: widget.institution?.city);
   }
 
   @override
@@ -414,12 +414,12 @@ class _SchoolDialogState extends State<_SchoolDialog> {
     }
     Navigator.of(
       context,
-    ).pop(SchoolDraft(name: _name.text.trim(), city: _city.text.trim()));
+    ).pop(InstitutionDraft(name: _name.text.trim(), city: _city.text.trim()));
   }
 
   @override
   Widget build(BuildContext context) {
-    final editing = widget.school != null;
+    final editing = widget.institution != null;
     return _DialogFrame(
       title: editing ? 'Editar institución' : 'Nueva institución',
       subtitle: 'Registra los colegios que harán parte de la plataforma.',
@@ -729,9 +729,9 @@ class _QuestionDialogState extends State<_QuestionDialog> {
 }
 
 class _InvitationCodeDialog extends StatefulWidget {
-  const _InvitationCodeDialog({required this.schools});
+  const _InvitationCodeDialog({required this.institutions});
 
-  final List<SchoolModel> schools;
+  final List<InstitutionModel> institutions;
 
   @override
   State<_InvitationCodeDialog> createState() => _InvitationCodeDialogState();
@@ -749,7 +749,7 @@ class _InvitationCodeDialogState extends State<_InvitationCodeDialog> {
   @override
   void initState() {
     super.initState();
-    _institutionId = widget.schools.first.id;
+    _institutionId = widget.institutions.first.id;
   }
 
   @override
@@ -824,11 +824,11 @@ class _InvitationCodeDialogState extends State<_InvitationCodeDialog> {
                 labelText: 'Institución',
                 prefixIcon: Icon(Icons.apartment_outlined),
               ),
-              items: widget.schools
+              items: widget.institutions
                   .map(
-                    (school) => DropdownMenuItem(
-                      value: school.id,
-                      child: Text(school.name, overflow: TextOverflow.ellipsis),
+                    (institution) => DropdownMenuItem(
+                      value: institution.id,
+                      child: Text(institution.name, overflow: TextOverflow.ellipsis),
                     ),
                   )
                   .toList(),

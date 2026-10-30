@@ -46,25 +46,25 @@ class ContentRepository {
     _ensureSuccess(response);
   }
 
-  Future<List<SchoolModel>> getSchools() async {
+  Future<List<InstitutionModel>> getInstitutions() async {
     final response =
         await _apiClient.get('/api/institutions', authenticated: true);
     _ensureSuccess(response);
-    return _decodeList(response.body, SchoolModel.fromJson);
+    return _decodeList(response.body, InstitutionModel.fromJson);
   }
 
-  Future<SchoolModel> createSchool({required String name, String? city}) async {
+  Future<InstitutionModel> createInstitution({required String name, String? city}) async {
     final response = await _apiClient.post(
       '/api/institutions',
       authenticated: true,
       body: {'name': name, 'city': _nullIfBlank(city)},
     );
     _ensureSuccess(response);
-    return SchoolModel.fromJson(_decodeObject(response.body));
+    return InstitutionModel.fromJson(_decodeObject(response.body));
   }
 
   /// Returns the updated institution so the caller can update its list without reloading it.
-  Future<SchoolModel> updateSchool(String id,
+  Future<InstitutionModel> updateInstitution(String id,
       {required String name, String? city}) async {
     final response = await _apiClient.put(
       '/api/institutions/$id',
@@ -72,10 +72,10 @@ class ContentRepository {
       body: {'name': name, 'city': _nullIfBlank(city)},
     );
     _ensureSuccess(response);
-    return SchoolModel.fromJson(_decodeObject(response.body));
+    return InstitutionModel.fromJson(_decodeObject(response.body));
   }
 
-  Future<void> deleteSchool(String id) async {
+  Future<void> deleteInstitution(String id) async {
     final response =
         await _apiClient.delete('/api/institutions/$id', authenticated: true);
     _ensureSuccess(response);

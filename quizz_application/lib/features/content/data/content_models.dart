@@ -39,14 +39,14 @@ class SubjectModel {
   }
 }
 
-class SchoolModel {
-  const SchoolModel({required this.id, required this.name, this.city});
+class InstitutionModel {
+  const InstitutionModel({required this.id, required this.name, this.city});
   final String id;
   final String name;
   final String? city;
 
-  factory SchoolModel.fromJson(Map<String, dynamic> json) {
-    return SchoolModel(
+  factory InstitutionModel.fromJson(Map<String, dynamic> json) {
+    return InstitutionModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       city: json['city']?.toString(),

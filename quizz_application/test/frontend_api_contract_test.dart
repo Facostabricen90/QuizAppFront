@@ -569,7 +569,7 @@ Map<String, dynamic> _authResponse({required String role}) {
       'firstName': 'Test',
       'lastName': 'User',
       'roles': [role],
-      'schoolId': null,
+      'institutionId': null,
     },
   };
 }
@@ -593,7 +593,7 @@ const _questionResponse = {
 const _invitationCodeResponse = {
   'id': 'code-id',
   'code': 'COLEGIO-SJ-2026',
-  'institutionId': 'school-id',
+  'institutionId': 'institution-id',
   'institutionName': 'Colegio San José',
   'maxUses': 100,
   'uses': 3,

@@ -92,6 +92,22 @@ Routes that did not change: `login`, `register-staff`, `forgot-password`, `reset
 - **Files:** `lib/features/practice/data/practice_models.dart`, `practice_repository.dart`,
   `lib/features/student/presentation/pages/student_dashboard_page.dart`.
 
+### 2.6 `School` → `Institution` (follows backend phase 6)
+- **Why:** the backend renamed the concept everywhere and the user JSON field changed from `schoolId` to **`institutionId`**.
+  Without this change `AuthUser.institutionId` would always be null.
+- **API-visible change:** `AuthUser.schoolId` → `AuthUser.institutionId`, read from `json['institutionId']`.
+- **Code renamed for consistency** (same concept, same name in back and front):
+
+| Before | Now |
+|---|---|
+| `SchoolModel`, `SchoolDraft` | `InstitutionModel`, `InstitutionDraft` |
+| `ContentRepository.getSchools / createSchool / updateSchool / deleteSchool` | `getInstitutions / createInstitution / updateInstitution / deleteInstitution` |
+| Admin panel: `_schools`, `_openSchool`, `_deleteSchool`, `_sortedSchools`, `_SchoolsPanel`, `_AdminSection.schools` | `_institutions`, `_openInstitution`, `_deleteInstitution`, `_sortedInstitutions`, `_InstitutionsPanel`, `_AdminSection.institutions` |
+| `showSchoolDialog`, `_SchoolDialog` | `showInstitutionDialog`, `_InstitutionDialog` |
+
+- The URL did not change (`/api/institutions` already used that name), and the texts shown to the user were already "Instituciones".
+- Flutter icon names such as `Icons.school_outlined` were intentionally **not** renamed.
+
 ---
 
 ## 3. Testing
@@ -121,10 +137,13 @@ backend `refactor` branch — once with a fresh database and once with a copy of
 
 A grep confirmed that no old route remains in `lib/` or `test/`.
 
+**After the `School` → `Institution` rename (2.6):** `flutter analyze` no issues, `flutter test` 28 / 28, and the end-to-end check passed again
+against the backend with a fresh database and with a copy of the developer's database migrated at startup (the student now receives
+`institutionId` and `isInstitutional` is true).
+
 ---
 
 ## 4. Pending
 
-- Phase 6 on the backend (`School` → `Institution` rename) will not change any URL used here (`/api/institutions` already uses that name).
 - The 2FA and Google sign-in endpoints exist in the backend but the app does not use them yet.
 - `test/` names are still in Spanish (existing tests); new tests are in English.
