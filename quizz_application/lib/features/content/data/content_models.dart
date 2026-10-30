@@ -59,16 +59,21 @@ class QuestionOptionModel {
     required this.id,
     required this.text,
     required this.isCorrect,
+    this.imageUrl,
   });
   final String id;
   final String text;
   final bool isCorrect;
+
+  /// Optional option image (charts, diagrams...).
+  final String? imageUrl;
 
   factory QuestionOptionModel.fromJson(Map<String, dynamic> json) {
     return QuestionOptionModel(
       id: json['id']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
       isCorrect: json['isCorrect'] == true,
+      imageUrl: json['imageUrl']?.toString(),
     );
   }
 }
@@ -83,6 +88,8 @@ class QuestionModel {
     required this.subjectName,
     required this.createdByUserId,
     required this.options,
+    this.imageUrl,
+    this.justificationImageUrl,
   });
 
   final String id;
@@ -94,12 +101,20 @@ class QuestionModel {
   final String createdByUserId;
   final List<QuestionOptionModel> options;
 
+  /// Optional statement image (maps, charts, tables...).
+  final String? imageUrl;
+
+  /// Optional justification image (formulas, worked steps...).
+  final String? justificationImageUrl;
+
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     final rawOptions = json['options'];
     return QuestionModel(
       id: json['id']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
+      imageUrl: json['imageUrl']?.toString(),
       justification: json['justification']?.toString() ?? '',
+      justificationImageUrl: json['justificationImageUrl']?.toString(),
       difficulty: QuestionDifficulty.fromJson(json['difficulty']),
       subjectId: json['subjectId']?.toString() ?? '',
       subjectName: json['subjectName']?.toString() ?? '',
@@ -117,10 +132,23 @@ class QuestionModel {
 }
 
 class QuestionOptionDraft {
-  const QuestionOptionDraft({required this.text, required this.isCorrect});
+  const QuestionOptionDraft({
+    required this.text,
+    required this.isCorrect,
+    this.imageUrl,
+  });
   final String text;
   final bool isCorrect;
-  Map<String, dynamic> toJson() => {'text': text, 'isCorrect': isCorrect};
+
+  /// Kept when editing: the backend stores exactly what it receives,
+  /// so an image that is not sent back would be deleted.
+  final String? imageUrl;
+
+  Map<String, dynamic> toJson() => {
+    'text': text,
+    'isCorrect': isCorrect,
+    'imageUrl': imageUrl,
+  };
 }
 
 class QuestionDraft {
@@ -130,6 +158,8 @@ class QuestionDraft {
     required this.difficulty,
     required this.subjectId,
     required this.options,
+    this.imageUrl,
+    this.justificationImageUrl,
   });
   final String text;
   final String justification;
@@ -137,10 +167,16 @@ class QuestionDraft {
   final String subjectId;
   final List<QuestionOptionDraft> options;
 
+  /// Kept when editing (see [QuestionOptionDraft.imageUrl]).
+  final String? imageUrl;
+  final String? justificationImageUrl;
+
   Map<String, dynamic> toJson() {
     return {
       'text': text,
+      'imageUrl': imageUrl,
       'justification': justification,
+      'justificationImageUrl': justificationImageUrl,
       'difficulty': difficulty.apiValue,
       'subjectId': subjectId,
       'options': options.map((option) => option.toJson()).toList(),

@@ -20,7 +20,8 @@ class ApiClient {
   final http.Client _client;
   final String baseUrl;
 
-  Future<bool>? _refreshInFlight;
+  /// Refresh request in progress, shared so parallel 401s trigger a single refresh.
+  Future<AuthUser?>? _refreshInFlight;
 
   Future<http.Response> get(String path, {bool authenticated = false}) {
     return _request(method: 'GET', path: path, authenticated: authenticated);
@@ -65,7 +66,9 @@ class ApiClient {
     );
   }
 
-  Future<bool> tryRefreshSession() => _refreshTokens();
+  /// Renews the session with the stored refresh token.
+  /// Returns the up-to-date user (the refresh response includes it), or null if the session could not be renewed.
+  Future<AuthUser?> tryRefreshSession() => _refreshTokens();
 
   Future<http.Response> _request({
     required String method,
@@ -81,8 +84,8 @@ class ApiClient {
     );
 
     if (response.statusCode == 401 && authenticated) {
-      final refreshed = await _refreshTokens();
-      if (refreshed) {
+      final refreshedUser = await _refreshTokens();
+      if (refreshedUser != null) {
         response = await _send(
           method: method,
           path: path,
@@ -131,7 +134,7 @@ class ApiClient {
     }
   }
 
-  Future<bool> _refreshTokens() {
+  Future<AuthUser?> _refreshTokens() {
     final currentRefresh = _refreshInFlight;
     if (currentRefresh != null) {
       return currentRefresh;
@@ -148,15 +151,15 @@ class ApiClient {
     return refreshOperation;
   }
 
-  Future<bool> _performRefresh() async {
+  Future<AuthUser?> _performRefresh() async {
     final refreshToken = await _tokenStorage.readRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
-      return false;
+      return null;
     }
 
     final response = await _send(
       method: 'POST',
-      path: '/api/auth/refresh',
+      path: '/api/auth/refresh-token',
       body: {'refreshToken': refreshToken},
       authenticated: false,
     );
@@ -165,17 +168,17 @@ class ApiClient {
       if (response.statusCode == 400 || response.statusCode == 401) {
         await _tokenStorage.clear();
       }
-      return false;
+      return null;
     }
 
     try {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final session = AuthSession.fromJson(json);
-      await _tokenStorage.saveSession(session);
-      return true;
+      final authResponse = AuthResponse.fromJson(json);
+      await _tokenStorage.saveSession(authResponse.session);
+      return authResponse.user;
     } on FormatException {
       await _tokenStorage.clear();
-      return false;
+      return null;
     }
   }
 

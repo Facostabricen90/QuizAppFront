@@ -69,7 +69,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   ContentRepository? _contentRepository;
   PracticeRepository? _practiceRepository;
   List<SubjectModel> _subjects = const [];
-  List<PracticeSessionModel> _sessions = const [];
+  List<PracticeSessionSummaryModel> _sessions = const [];
   bool _loading = false;
   String? _errorMessage;
   int _selectedIndex = 0;
@@ -109,7 +109,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     });
     try {
       final subjectsFuture = contentRepository.getSubjects();
-      final sessionsFuture = practiceRepository.getMySessions();
+      final sessionsFuture = practiceRepository.getHistory();
       final subjects = await subjectsFuture;
       final sessions = await sessionsFuture;
       if (!mounted) return;
@@ -292,7 +292,7 @@ class _HomeView extends StatelessWidget {
   });
 
   final List<SubjectModel> subjects;
-  final List<PracticeSessionModel> sessions;
+  final List<PracticeSessionSummaryModel> sessions;
   final VoidCallback onDailyChallenge;
   final void Function(SubjectModel subject, {int? questionCount})
   onStartSubject;
@@ -303,9 +303,7 @@ class _HomeView extends StatelessWidget {
     final completed = sessions.where((session) => session.isCompleted).length;
     final answered = sessions.fold<int>(
       0,
-      (total, session) =>
-          total +
-          session.questions.where((question) => question.answered).length,
+      (total, session) => total + session.answeredQuestions,
     );
     final lastSubject = sessions.isEmpty
         ? 'Sin iniciar'
@@ -460,7 +458,7 @@ class _SubjectsGrid extends StatelessWidget {
 class _ProgressView extends StatelessWidget {
   const _ProgressView({required this.sessions});
 
-  final List<PracticeSessionModel> sessions;
+  final List<PracticeSessionSummaryModel> sessions;
 
   @override
   Widget build(BuildContext context) {
@@ -505,12 +503,11 @@ class _ProgressView extends StatelessWidget {
 class _SessionTile extends StatelessWidget {
   const _SessionTile({required this.session});
 
-  final PracticeSessionModel session;
+  final PracticeSessionSummaryModel session;
 
   @override
   Widget build(BuildContext context) {
-    final answered =
-        session.questions.where((question) => question.answered).length;
+    final answered = session.answeredQuestions;
     final date = session.startedAtUtc?.toLocal();
     final dateLabel = date == null
         ? 'Fecha no disponible'
@@ -528,7 +525,7 @@ class _SessionTile extends StatelessWidget {
       ),
       title: Text(session.subjectName),
       subtitle: Text(
-        '$answered/${session.questions.length} respondidas · $dateLabel',
+        '$answered/${session.totalQuestions} respondidas · $dateLabel',
       ),
       trailing: Text(
         session.isCompleted ? 'Completada' : 'En progreso',

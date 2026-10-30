@@ -136,6 +136,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       );
   }
 
+  /// Runs a create / update / delete. The [operation] calls the API and updates only the
+  /// affected list with the response (see _replaceById / _removeById), instead of
+  /// reloading every list of the panel after each change.
   Future<void> _runMutation(
     Future<void> Function() operation,
     String successMessage,
@@ -146,13 +149,46 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       await operation();
       if (!mounted) return;
       _showMessage(successMessage);
-      await _loadData(showProgress: false);
     } catch (error) {
       if (mounted) _showMessage(_messageFor(error), error: true);
     } finally {
       if (mounted) setState(() => _mutating = false);
     }
   }
+
+  /// Applies a state change only if the page is still on screen.
+  void _updateIfMounted(VoidCallback change) {
+    if (mounted) setState(change);
+  }
+
+  /// Returns a copy of [items] with the element that has the same id replaced by [updatedItem].
+  static List<T> _replaceById<T>(
+    List<T> items,
+    T updatedItem,
+    String Function(T item) idOf,
+  ) {
+    final updatedId = idOf(updatedItem);
+    return [
+      for (final item in items) idOf(item) == updatedId ? updatedItem : item,
+    ];
+  }
+
+  /// Returns a copy of [items] without the element with the given id.
+  static List<T> _removeById<T>(
+    List<T> items,
+    String removedId,
+    String Function(T item) idOf,
+  ) {
+    return items.where((item) => idOf(item) != removedId).toList(growable: false);
+  }
+
+  /// Same order the API uses for subjects (by name).
+  static List<SubjectModel> _sortedSubjects(List<SubjectModel> subjects) =>
+      [...subjects]..sort((first, second) => first.name.compareTo(second.name));
+
+  /// Same order the API uses for institutions (by name).
+  static List<SchoolModel> _sortedSchools(List<SchoolModel> schools) =>
+      [...schools]..sort((first, second) => first.name.compareTo(second.name));
 
   Future<bool> _confirmDelete(String title, String detail) async {
     return await showDialog<bool>(
@@ -191,9 +227,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     if (draft == null || !mounted) return;
     await _runMutation(() async {
       if (question == null) {
-        await repository.createQuestion(draft);
+        final createdQuestion = await repository.createQuestion(draft);
+        _updateIfMounted(() => _questions = [createdQuestion, ..._questions]);
       } else {
-        await repository.updateQuestion(question.id, draft);
+        final updatedQuestion = await repository.updateQuestion(question.id, draft);
+        _updateIfMounted(
+          () => _questions = _replaceById(_questions, updatedQuestion, (item) => item.id),
+        );
       }
     }, question == null ? 'Pregunta creada.' : 'Pregunta actualizada.');
   }
@@ -201,7 +241,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Future<void> _deleteQuestion(QuestionModel question) async {
     final repository = _repository;
     if (repository == null || !await _confirmDelete('Eliminar pregunta', 'Esta acción eliminará “${question.text}”.')) return;
-    await _runMutation(() => repository.deleteQuestion(question.id), 'Pregunta eliminada.');
+    await _runMutation(() async {
+      await repository.deleteQuestion(question.id);
+      _updateIfMounted(
+        () => _questions = _removeById(_questions, question.id, (item) => item.id),
+      );
+    }, 'Pregunta eliminada.');
   }
 
   Future<void> _openSubject([SubjectModel? subject]) async {
@@ -211,9 +256,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     if (draft == null || !mounted) return;
     await _runMutation(() async {
       if (subject == null) {
-        await repository.createSubject(name: draft.name, description: draft.description);
+        final createdSubject = await repository.createSubject(name: draft.name, description: draft.description);
+        _updateIfMounted(() => _subjects = _sortedSubjects([..._subjects, createdSubject]));
       } else {
-        await repository.updateSubject(subject.id, name: draft.name, description: draft.description);
+        final updatedSubject = await repository.updateSubject(subject.id, name: draft.name, description: draft.description);
+        _updateIfMounted(
+          () => _subjects = _sortedSubjects(_replaceById(_subjects, updatedSubject, (item) => item.id)),
+        );
+        // Questions show the subject name, so they are the only list that depends on this change.
+        if (updatedSubject.name != subject.name) {
+          final refreshedQuestions = await repository.getQuestions();
+          _updateIfMounted(() => _questions = refreshedQuestions);
+        }
       }
     }, subject == null ? 'Materia creada.' : 'Materia actualizada.');
   }
@@ -221,7 +275,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Future<void> _deleteSubject(SubjectModel subject) async {
     final repository = _repository;
     if (repository == null || !await _confirmDelete('Eliminar materia', 'Se intentará eliminar “${subject.name}”. Si tiene preguntas asociadas, el backend puede impedirlo.')) return;
-    await _runMutation(() => repository.deleteSubject(subject.id), 'Materia eliminada.');
+    await _runMutation(() async {
+      // The API refuses to delete a subject that still has questions, so no other list changes.
+      await repository.deleteSubject(subject.id);
+      _updateIfMounted(
+        () => _subjects = _removeById(_subjects, subject.id, (item) => item.id),
+      );
+    }, 'Materia eliminada.');
   }
 
   Future<void> _openSchool([SchoolModel? school]) async {
@@ -231,9 +291,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     if (draft == null || !mounted) return;
     await _runMutation(() async {
       if (school == null) {
-        await repository.createSchool(name: draft.name, city: draft.city);
+        final createdSchool = await repository.createSchool(name: draft.name, city: draft.city);
+        _updateIfMounted(() => _schools = _sortedSchools([..._schools, createdSchool]));
       } else {
-        await repository.updateSchool(school.id, name: draft.name, city: draft.city);
+        final updatedSchool = await repository.updateSchool(school.id, name: draft.name, city: draft.city);
+        _updateIfMounted(
+          () => _schools = _sortedSchools(_replaceById(_schools, updatedSchool, (item) => item.id)),
+        );
+        // Invitation codes show the institution name, so they are the only list that depends on this change.
+        if (updatedSchool.name != school.name) {
+          final refreshedCodes = await repository.getInvitationCodes();
+          _updateIfMounted(() => _invitationCodes = refreshedCodes);
+        }
       }
     }, school == null ? 'Institución creada.' : 'Institución actualizada.');
   }
@@ -241,7 +310,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Future<void> _deleteSchool(SchoolModel school) async {
     final repository = _repository;
     if (repository == null || !await _confirmDelete('Eliminar institución', 'Esta acción eliminará “${school.name}”.')) return;
-    await _runMutation(() => repository.deleteSchool(school.id), 'Institución eliminada.');
+    await _runMutation(() async {
+      await repository.deleteSchool(school.id);
+      _updateIfMounted(() {
+        _schools = _removeById(_schools, school.id, (item) => item.id);
+        // The API deletes the institution's invitation codes together with it.
+        _invitationCodes = _invitationCodes
+            .where((code) => code.institutionId != school.id)
+            .toList(growable: false);
+      });
+    }, 'Institución eliminada.');
   }
 
   Future<void> _createTeacher() async {
@@ -273,7 +351,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     final draft = await showInvitationCodeDialog(context, schools: _schools);
     if (draft == null || !mounted) return;
     await _runMutation(() async {
-      await repository.createInvitationCode(institutionId: draft.institutionId, code: draft.code, maxUses: draft.maxUses, expiresAtUtc: draft.expiresAtUtc);
+      final createdCode = await repository.createInvitationCode(institutionId: draft.institutionId, code: draft.code, maxUses: draft.maxUses, expiresAtUtc: draft.expiresAtUtc);
+      _updateIfMounted(() => _invitationCodes = [createdCode, ..._invitationCodes]);
     }, 'Código creado.');
   }
 
@@ -292,13 +371,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
         ) ?? false;
     if (!confirmed) return;
-    await _runMutation(() => repository.revokeInvitationCode(code.id), 'Código revocado.');
+    await _runMutation(() async {
+      final revokedCode = await repository.revokeInvitationCode(code);
+      _updateIfMounted(
+        () => _invitationCodes = _replaceById(_invitationCodes, revokedCode, (item) => item.id),
+      );
+    }, 'Código revocado.');
   }
 
   Future<void> _deleteInvitationCode(InvitationCodeModel code) async {
     final repository = _repository;
     if (repository == null || !await _confirmDelete('Eliminar código', 'Esta acción eliminará permanentemente el código “${code.code}”.')) return;
-    await _runMutation(() => repository.deleteInvitationCode(code.id), 'Código eliminado.');
+    await _runMutation(() async {
+      await repository.deleteInvitationCode(code.id);
+      _updateIfMounted(
+        () => _invitationCodes = _removeById(_invitationCodes, code.id, (item) => item.id),
+      );
+    }, 'Código eliminado.');
   }
 
   @override

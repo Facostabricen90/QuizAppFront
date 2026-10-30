@@ -471,6 +471,10 @@ class _QuestionDialogState extends State<_QuestionDialog> {
   late final TextEditingController _text;
   late final TextEditingController _justification;
   late final List<TextEditingController> _options;
+
+  /// Image of each option, kept in the same position as [_options] so that adding or
+  /// removing options never moves an image to a different option.
+  late final List<String?> _optionImageUrls;
   late String _subjectId;
   late QuestionDifficulty _difficulty;
   late int _correctIndex;
@@ -487,8 +491,12 @@ class _QuestionDialogState extends State<_QuestionDialog> {
     _options = existingOptions
         .map((option) => TextEditingController(text: option.text))
         .toList();
+    _optionImageUrls = existingOptions
+        .map((option) => option.imageUrl)
+        .toList();
     while (_options.length < 4) {
       _options.add(TextEditingController());
+      _optionImageUrls.add(null);
     }
     final existingCorrect = existingOptions.indexWhere(
       (option) => option.isCorrect,
@@ -510,7 +518,10 @@ class _QuestionDialogState extends State<_QuestionDialog> {
     if (_options.length >= 6) {
       return;
     }
-    setState(() => _options.add(TextEditingController()));
+    setState(() {
+      _options.add(TextEditingController());
+      _optionImageUrls.add(null);
+    });
   }
 
   void _removeOption(int index) {
@@ -518,6 +529,7 @@ class _QuestionDialogState extends State<_QuestionDialog> {
       return;
     }
     final removed = _options.removeAt(index);
+    _optionImageUrls.removeAt(index);
     removed.dispose();
     if (_correctIndex == index) {
       _correctIndex = 0;
@@ -534,7 +546,9 @@ class _QuestionDialogState extends State<_QuestionDialog> {
     Navigator.of(context).pop(
       QuestionDraft(
         text: _text.text.trim(),
+        imageUrl: widget.question?.imageUrl,
         justification: _justification.text.trim(),
+        justificationImageUrl: widget.question?.justificationImageUrl,
         difficulty: _difficulty,
         subjectId: _subjectId,
         options: [
@@ -542,6 +556,7 @@ class _QuestionDialogState extends State<_QuestionDialog> {
             QuestionOptionDraft(
               text: _options[index].text.trim(),
               isCorrect: index == _correctIndex,
+              imageUrl: _optionImageUrls[index],
             ),
         ],
       ),

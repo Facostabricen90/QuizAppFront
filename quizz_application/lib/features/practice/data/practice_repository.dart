@@ -9,9 +9,10 @@ class PracticeRepository {
 
   final ApiClient _apiClient;
 
-  Future<List<PracticeSessionModel>> getMySessions() async {
+  /// Practice history of the signed-in student, newest first (summaries only, no questions).
+  Future<List<PracticeSessionSummaryModel>> getHistory() async {
     final response = await _apiClient.get(
-      '/api/practice-sessions',
+      '/api/practice-sessions/history',
       authenticated: true,
     );
     _ensureSuccess(response);
@@ -22,8 +23,9 @@ class PracticeRepository {
     return decoded
         .whereType<Map>()
         .map(
-          (session) =>
-              PracticeSessionModel.fromJson(Map<String, dynamic>.from(session)),
+          (session) => PracticeSessionSummaryModel.fromJson(
+            Map<String, dynamic>.from(session),
+          ),
         )
         .toList(growable: false);
   }

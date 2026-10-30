@@ -30,7 +30,7 @@ class AuthRepository {
     String? invitationCode,
   }) async {
     final response = await _apiClient.post(
-      '/api/auth/register',
+      '/api/auth/register-student',
       body: {
         'email': email,
         'password': password,
@@ -63,12 +63,6 @@ class AuthRepository {
       },
     );
     _ensureSuccess(response.statusCode, response);
-  }
-
-  Future<AuthUser> session() async {
-    final response = await _apiClient.get('/api/auth/session', authenticated: true);
-    _ensureSuccess(response.statusCode, response);
-    return AuthUser.fromJson(_decodeObject(response.body));
   }
 
   Future<void> requestPasswordReset({required String email}) async {
@@ -119,31 +113,21 @@ class AuthRepository {
 
   Future<void> resendConfirmation({required String email}) async {
     final response = await _apiClient.post(
-      '/api/auth/resend-confirmation',
+      '/api/auth/resend-confirmation-email',
       body: {'email': email},
     );
     _ensureSuccess(response.statusCode, response);
   }
 
+  /// Restores the session when the app starts. A single request: the refresh-token
+  /// response already includes the up-to-date user.
   Future<AuthUser?> restoreSession() async {
     final refreshToken = await _tokenStorage.readRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
       return null;
     }
 
-    final refreshed = await _apiClient.tryRefreshSession();
-    if (!refreshed) {
-      return null;
-    }
-
-    try {
-      return await session();
-    } on ApiException catch (error) {
-      if (error.statusCode == 401) {
-        await _tokenStorage.clear();
-      }
-      rethrow;
-    }
+    return _apiClient.tryRefreshSession();
   }
 
   Future<void> logout() async {
@@ -152,7 +136,7 @@ class AuthRepository {
     try {
       if (refreshToken != null && refreshToken.isNotEmpty) {
         await _apiClient.post(
-          '/api/auth/revoke',
+          '/api/auth/logout',
           body: {'refreshToken': refreshToken},
           authenticated: true,
         );

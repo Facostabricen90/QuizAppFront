@@ -86,8 +86,8 @@ class AuthUser {
   }
 }
 
-/// Respuesta de endpoints que emiten sesión completa (login, 2fa/verify, register-staff, google).
-/// Siempre incluye [session] y [user].
+/// Response of every endpoint that issues a session (login, google-login, 2fa/verify-login, refresh-token).
+/// Always includes [session] and [user].
 class AuthResponse {
   const AuthResponse({required this.session, required this.user});
 

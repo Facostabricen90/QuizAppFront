@@ -28,7 +28,8 @@ class ContentRepository {
     return SubjectModel.fromJson(_decodeObject(response.body));
   }
 
-  Future<void> updateSubject(String id,
+  /// Returns the updated subject (the API sends it back) so the caller can update its list without reloading it.
+  Future<SubjectModel> updateSubject(String id,
       {required String name, String? description}) async {
     final response = await _apiClient.put(
       '/api/subjects/$id',
@@ -36,6 +37,7 @@ class ContentRepository {
       body: {'name': name, 'description': _nullIfBlank(description)},
     );
     _ensureSuccess(response);
+    return SubjectModel.fromJson(_decodeObject(response.body));
   }
 
   Future<void> deleteSubject(String id) async {
@@ -61,7 +63,8 @@ class ContentRepository {
     return SchoolModel.fromJson(_decodeObject(response.body));
   }
 
-  Future<void> updateSchool(String id,
+  /// Returns the updated institution so the caller can update its list without reloading it.
+  Future<SchoolModel> updateSchool(String id,
       {required String name, String? city}) async {
     final response = await _apiClient.put(
       '/api/institutions/$id',
@@ -69,6 +72,7 @@ class ContentRepository {
       body: {'name': name, 'city': _nullIfBlank(city)},
     );
     _ensureSuccess(response);
+    return SchoolModel.fromJson(_decodeObject(response.body));
   }
 
   Future<void> deleteSchool(String id) async {
@@ -94,10 +98,12 @@ class ContentRepository {
     return QuestionModel.fromJson(_decodeObject(response.body));
   }
 
-  Future<void> updateQuestion(String id, QuestionDraft draft) async {
+  /// Returns the updated question so the caller can update its list without reloading it.
+  Future<QuestionModel> updateQuestion(String id, QuestionDraft draft) async {
     final response = await _apiClient.put('/api/questions/$id',
         authenticated: true, body: draft.toJson());
     _ensureSuccess(response);
+    return QuestionModel.fromJson(_decodeObject(response.body));
   }
 
   Future<void> deleteQuestion(String id) async {
@@ -133,7 +139,8 @@ class ContentRepository {
     return InvitationCodeModel.fromJson(_decodeObject(response.body));
   }
 
-  Future<void> updateInvitationCode(String id,
+  /// Returns the updated code so the caller can update its list without reloading it.
+  Future<InvitationCodeModel> updateInvitationCode(String id,
       {required int maxUses,
       DateTime? expiresAtUtc,
       required bool isActive}) async {
@@ -147,12 +154,18 @@ class ContentRepository {
       },
     );
     _ensureSuccess(response);
+    return InvitationCodeModel.fromJson(_decodeObject(response.body));
   }
 
-  Future<void> revokeInvitationCode(String id) async {
-    final response = await _apiClient.post('/api/invitation-codes/$id/revoke',
-        authenticated: true);
-    _ensureSuccess(response);
+  /// Revoking = updating the code with isActive = false (keeps its uses and expiration).
+  /// The code is not deleted and can be reactivated later.
+  Future<InvitationCodeModel> revokeInvitationCode(InvitationCodeModel code) {
+    return updateInvitationCode(
+      code.id,
+      maxUses: code.maxUses,
+      expiresAtUtc: code.expiresAtUtc,
+      isActive: false,
+    );
   }
 
   Future<void> deleteInvitationCode(String id) async {
@@ -172,7 +185,7 @@ class ContentRepository {
 
   Future<SubscriptionModel?> getMySubscription() async {
     final response = await _apiClient.get(
-      '/api/subscriptions/current',
+      '/api/subscriptions/current-user',
       authenticated: true,
     );
 
@@ -188,10 +201,9 @@ class ContentRepository {
     return SubscriptionModel.fromJson(Map<String, dynamic>.from(decoded));
   }
 
-  // NUEVO MÉTODO
   Future<ReportResponseModel> getStudentReports() async {
-    final response =
-        await _apiClient.get('/api/reports/students', authenticated: true);
+    final response = await _apiClient.get('/api/reports/student-performance',
+        authenticated: true);
     _ensureSuccess(response);
     return ReportResponseModel.fromJson(_decodeObject(response.body));
   }

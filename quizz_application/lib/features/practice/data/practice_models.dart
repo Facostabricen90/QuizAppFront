@@ -101,6 +101,48 @@ class PracticeSessionModel {
   }
 }
 
+/// One row of the practice history (GET /api/practice-sessions/history).
+/// Only counts, no questions: the history and progress screens do not need them.
+class PracticeSessionSummaryModel {
+  const PracticeSessionSummaryModel({
+    required this.id,
+    required this.subjectId,
+    required this.subjectName,
+    required this.status,
+    required this.startedAtUtc,
+    required this.totalQuestions,
+    required this.answeredQuestions,
+    required this.correctAnswers,
+    this.finishedAtUtc,
+  });
+
+  final String id;
+  final String subjectId;
+  final String subjectName;
+  final String status;
+  final DateTime? startedAtUtc;
+  final DateTime? finishedAtUtc;
+  final int totalQuestions;
+  final int answeredQuestions;
+  final int correctAnswers;
+
+  bool get isCompleted => status.toLowerCase() == 'completed';
+
+  factory PracticeSessionSummaryModel.fromJson(Map<String, dynamic> json) {
+    return PracticeSessionSummaryModel(
+      id: json['id']?.toString() ?? '',
+      subjectId: json['subjectId']?.toString() ?? '',
+      subjectName: json['subjectName']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      startedAtUtc: DateTime.tryParse(json['startedAtUtc']?.toString() ?? ''),
+      finishedAtUtc: DateTime.tryParse(json['finishedAtUtc']?.toString() ?? ''),
+      totalQuestions: (json['totalQuestions'] as num?)?.toInt() ?? 0,
+      answeredQuestions: (json['answeredQuestions'] as num?)?.toInt() ?? 0,
+      correctAnswers: (json['correctAnswers'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class AnswerResultModel {
   const AnswerResultModel({
     required this.questionId,

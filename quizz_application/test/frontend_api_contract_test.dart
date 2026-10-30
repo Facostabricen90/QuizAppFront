@@ -52,7 +52,7 @@ void main() {
       // nunca emite sesión (debe confirmarse el correo primero).
       expect(result.message, isNotEmpty);
       expect(storage.savedSessions, 0);
-      expect(capturedRequest.url.path, '/api/auth/register');
+      expect(capturedRequest.url.path, '/api/auth/register-student');
       expect(jsonDecode(capturedRequest.body), {
         'email': 'estudiante@example.com',
         'password': 'Password123',
@@ -202,7 +202,10 @@ void main() {
     final requests = <http.Request>[];
     final client = MockClient((request) async {
       requests.add(request);
-      return http.Response('', 204);
+      // PUT returns the updated question; DELETE returns no content.
+      return request.method == 'PUT'
+          ? http.Response(jsonEncode(_questionResponse), 200)
+          : http.Response('', 204);
     });
     final storage = _MemoryTokenStorage(accessToken: 'teacher-token');
     final apiClient = ApiClient(
@@ -222,13 +225,193 @@ void main() {
       ],
     );
 
-    await repository.updateQuestion('question-id', draft);
+    final updatedQuestion = await repository.updateQuestion('question-id', draft);
     await repository.deleteQuestion('question-id');
 
     expect(requests[0].method, 'PUT');
     expect(requests[0].url.path, '/api/questions/question-id');
+    expect(updatedQuestion.id, 'question-id');
     expect(requests[1].method, 'DELETE');
     expect(requests[1].url.path, '/api/questions/question-id');
+    apiClient.dispose();
+  });
+
+  test('editing a question sends its images back so they are not deleted', () async {
+    late http.Request capturedRequest;
+    final client = MockClient((request) async {
+      capturedRequest = request;
+      return http.Response(jsonEncode(_questionResponse), 200);
+    });
+    final apiClient = ApiClient(
+      tokenStorage: _MemoryTokenStorage(accessToken: 'teacher-token'),
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+    final repository = ContentRepository(apiClient);
+    const draft = QuestionDraft(
+      text: 'Pregunta con gráfica',
+      imageUrl: '/images/math_q9_tabla.png',
+      justification: 'Justificación',
+      justificationImageUrl: '/images/formula.png',
+      difficulty: QuestionDifficulty.medium,
+      subjectId: 'subject-id',
+      options: [
+        QuestionOptionDraft(
+          text: 'A',
+          isCorrect: true,
+          imageUrl: '/images/math_q12_grafica_a.png',
+        ),
+        QuestionOptionDraft(text: 'B', isCorrect: false),
+      ],
+    );
+
+    await repository.updateQuestion('question-id', draft);
+
+    final body = jsonDecode(capturedRequest.body) as Map<String, dynamic>;
+    expect(body['imageUrl'], '/images/math_q9_tabla.png');
+    expect(body['justificationImageUrl'], '/images/formula.png');
+    expect(
+      (body['options'] as List).first['imageUrl'],
+      '/images/math_q12_grafica_a.png',
+    );
+    apiClient.dispose();
+  });
+
+  test('restoring the session needs a single refresh-token request that returns the user', () async {
+    final requests = <http.Request>[];
+    final client = MockClient((request) async {
+      requests.add(request);
+      return http.Response(jsonEncode(_authResponse(role: 'Student')), 200);
+    });
+    final storage = _MemoryTokenStorage()..refreshToken = 'stored-refresh-token';
+    final apiClient = ApiClient(
+      tokenStorage: storage,
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+    final repository = AuthRepository(apiClient: apiClient, tokenStorage: storage);
+
+    final restoredUser = await repository.restoreSession();
+
+    expect(requests, hasLength(1));
+    expect(requests.single.method, 'POST');
+    expect(requests.single.url.path, '/api/auth/refresh-token');
+    expect(jsonDecode(requests.single.body), {'refreshToken': 'stored-refresh-token'});
+    expect(restoredUser?.email, 'user@example.com');
+    expect(storage.refreshToken, 'new-refresh-token');
+    apiClient.dispose();
+  });
+
+  test('logout revokes the refresh token on /api/auth/logout and clears local tokens', () async {
+    late http.Request capturedRequest;
+    final client = MockClient((request) async {
+      capturedRequest = request;
+      return http.Response('', 204);
+    });
+    final storage = _MemoryTokenStorage(accessToken: 'access-token')
+      ..refreshToken = 'stored-refresh-token';
+    final apiClient = ApiClient(
+      tokenStorage: storage,
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+    final repository = AuthRepository(apiClient: apiClient, tokenStorage: storage);
+
+    await repository.logout();
+
+    expect(capturedRequest.url.path, '/api/auth/logout');
+    expect(storage.refreshToken, isNull);
+    apiClient.dispose();
+  });
+
+  test('revoking an invitation code is a PUT with isActive false that keeps uses and expiration', () async {
+    late http.Request capturedRequest;
+    final client = MockClient((request) async {
+      capturedRequest = request;
+      return http.Response(
+        jsonEncode({..._invitationCodeResponse, 'isActive': false, 'isUsable': false}),
+        200,
+      );
+    });
+    final apiClient = ApiClient(
+      tokenStorage: _MemoryTokenStorage(accessToken: 'admin-token'),
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+    final repository = ContentRepository(apiClient);
+    final code = InvitationCodeModel.fromJson(_invitationCodeResponse);
+
+    final revokedCode = await repository.revokeInvitationCode(code);
+
+    expect(capturedRequest.method, 'PUT');
+    expect(capturedRequest.url.path, '/api/invitation-codes/code-id');
+    final body = jsonDecode(capturedRequest.body) as Map<String, dynamic>;
+    expect(body['isActive'], false);
+    expect(body['maxUses'], 100);
+    expect(body['expiresAtUtc'], isNotNull);
+    expect(revokedCode.isActive, isFalse);
+    apiClient.dispose();
+  });
+
+  test('the practice history uses the lightweight summary endpoint', () async {
+    late http.Request capturedRequest;
+    final client = MockClient((request) async {
+      capturedRequest = request;
+      return http.Response(
+        jsonEncode([
+          {
+            'id': 'session-id',
+            'subjectId': 'subject-id',
+            'subjectName': 'Matemáticas',
+            'status': 'Completed',
+            'startedAtUtc': '2026-09-10T18:00:00Z',
+            'finishedAtUtc': '2026-09-10T18:30:00Z',
+            'totalQuestions': 5,
+            'answeredQuestions': 4,
+            'correctAnswers': 3,
+          },
+        ]),
+        200,
+      );
+    });
+    final apiClient = ApiClient(
+      tokenStorage: _MemoryTokenStorage(accessToken: 'student-token'),
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+
+    final history = await PracticeRepository(apiClient).getHistory();
+
+    expect(capturedRequest.url.path, '/api/practice-sessions/history');
+    expect(history.single.isCompleted, isTrue);
+    expect(history.single.totalQuestions, 5);
+    expect(history.single.answeredQuestions, 4);
+    expect(history.single.correctAnswers, 3);
+    apiClient.dispose();
+  });
+
+  test('subscription and report endpoints use the renamed routes', () async {
+    final requestedPaths = <String>[];
+    final client = MockClient((request) async {
+      requestedPaths.add(request.url.path);
+      return request.url.path.startsWith('/api/reports')
+          ? http.Response(jsonEncode({'institutionName': null, 'students': []}), 200)
+          : http.Response('null', 200);
+    });
+    final apiClient = ApiClient(
+      tokenStorage: _MemoryTokenStorage(accessToken: 'token'),
+      baseUrl: 'https://localhost:7126',
+      client: client,
+    );
+    final repository = ContentRepository(apiClient);
+
+    expect(await repository.getMySubscription(), isNull);
+    await repository.getStudentReports();
+
+    expect(requestedPaths, [
+      '/api/subscriptions/current-user',
+      '/api/reports/student-performance',
+    ]);
     apiClient.dispose();
   });
 
@@ -390,6 +573,36 @@ Map<String, dynamic> _authResponse({required String role}) {
     },
   };
 }
+
+const _questionResponse = {
+  'id': 'question-id',
+  'text': 'Pregunta actualizada',
+  'imageUrl': null,
+  'justification': 'Justificación',
+  'justificationImageUrl': null,
+  'difficulty': 2,
+  'subjectId': 'subject-id',
+  'subjectName': 'Matemáticas',
+  'createdByUserId': 'teacher-id',
+  'options': [
+    {'id': 'option-a', 'text': 'A', 'isCorrect': true, 'imageUrl': null},
+    {'id': 'option-b', 'text': 'B', 'isCorrect': false, 'imageUrl': null},
+  ],
+};
+
+const _invitationCodeResponse = {
+  'id': 'code-id',
+  'code': 'COLEGIO-SJ-2026',
+  'institutionId': 'school-id',
+  'institutionName': 'Colegio San José',
+  'maxUses': 100,
+  'uses': 3,
+  'expiresAtUtc': '2027-04-30T00:00:00Z',
+  'isActive': true,
+  'isUsable': true,
+  'createdAtUtc': '2026-10-01T00:00:00Z',
+  'updatedAtUtc': null,
+};
 
 const _sessionResponse = {
   'id': 'session-id',
